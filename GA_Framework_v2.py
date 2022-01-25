@@ -162,8 +162,7 @@ xlim1 = {'low': 1.0e-4, 'high': 10e-4}            # {'low': 1, 'high': 5} floati
 xlim2 = list(np.arange(280, 320, 1))              # From 280 to 320 need to write: list(range(280,321)) or list(np.arange(280, 320, 1, dtype=int))
 xlim3 = {'low': 1e-2, 'high': 5.0e-2}             # list(np.linspace(1e-2, 5.0e-2, 100))
 gene_space = [xlim0, xlim1, xlim2, xlim3]
-# Initial population
-# initial_population = [np.array([x0]*sol_per_pop)]
+
 
 
 # ================================= GENETIC ALGORITHM OPTIMIZATION ========================================
@@ -194,7 +193,6 @@ ga_instance = pygad.GA(fitness_func = Objfun,
                        on_generation=on_generation,
                        crossover_type="uniform",
                        save_solutions=True)                         # !!!!!!!! save_solutions needed for graphs. Be careful for memory overflow !!!!!!!
-                       #initial_population=initial_population,
                        #mutation_probability=None
                        #mutation_by_replacement=True,
                        #crossover_probability=None,
