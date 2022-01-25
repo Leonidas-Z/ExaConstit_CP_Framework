@@ -272,23 +272,4 @@ def on_generation(ga_instance):
                        stop_criteria=None)
 
 
-## Original
-options = gaoptimset('InitialPopulation',x0,'PopulationSize',popul_size,'EliteCount',8,...
-    'CrossoverFraction',0.25,'Generations',no_gens,'FitnessLimit',1,'PlotFcns',{@gaplotbestf})
-
-# Run genetic algorithm fitting (Check Matlab documentation to learn about
-# input arguments)
-[x_best,fval]  =ga(fitnessfcn,nvars,[],[],[],[],lb,ub,[],[2,4,5,7,8],options) #this calls the Objfun for many times #2 4 5 7 8 keep as integers
-# Why not local 
-
-fprintf(fid,'#s\n','End of simulation')
-
-
-## Original
-options = gaoptimset('InitialPopulation',x0,'PopulationSize',popul_size,'EliteCount',8,...
-    'CrossoverFraction',0.25,'Generations',no_gens,'FitnessLimit',1,'PlotFcns',{@gaplotbestf})
-
-# Run genetic algorithm fitting (Check Matlab documentation to learn about
-# input arguments)
-[x_best,fval]  =ga(fitnessfcn,nvars,[],[],[],[],lb,ub,[],[2,4,5,7,8],options) # keep as integers the flowing parameters: 2 4 5 7 8
 '''
