@@ -12,11 +12,8 @@ import Matgen_GA
 
 
 # ========================================= GENERAL INPUTS =============================================
-## Use the following line if we do not want same random numbers (Ask Gumpy developers for that)
-'''
-    # restart MATLAB and generate a new seed
-    rng('shuffle')
-'''
+## We do not want same random numbers (Ask Gumpy developers for that)
+
 ## File names
 # Name of the options toml
 options_toml = 'mtsdd_bcc.toml'
