@@ -116,7 +116,6 @@ def Objfun(x, solution_idx):  # f_max, x_max are not used currently
         logger.debug('Macroscopic stress simulation output: \n\t'+str(S_sim))
 
         # Keep track of the f min value
-        # write out after the of each generation
         if f >= f_max:
             f_max = f
             x_max = x
