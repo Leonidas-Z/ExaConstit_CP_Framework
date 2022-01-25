@@ -170,11 +170,9 @@ gene_space = [xlim0, xlim1, xlim2, xlim3]
 def on_generation(ga_instance):
     global last_fitness
     logger.info("======================= End of a Generation =======================")
-    #logger.info("Generation number leo = %d" % (gen_count))
     logger.info("Generation number = {generation}".format(generation=ga_instance.generations_completed))
     logger.info("\nSo far:\niter_max = " + str(iter_max))
     logger.info("x_max = " + str(x_max))
-    #logger.info("f_max leo = %.11f" % (f_max))
     logger.info("f_max = {fitness}".format(fitness=ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]))
     logger.info("===================================================================\n\n")
     last_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
@@ -207,7 +205,7 @@ logger.info("\tParameters of the best solution : {solution}".format(solution = x
 logger.info("\tFitness value of the best solution : {solution_fitness}".format(solution_fitness=fit_solution))
 logger.info("\tBest fitness value reached after {best_solution_generation} generations.".format(best_solution_generation=ga_instance.best_solution_generation))
 logger.info("\tBest fitness value reached after " + str(iter_max)+' iterations')
-logger.info('\tTotal ExaConstit runs (iterations) = '+str(total_iterations)+' k = '+str(iter))
+logger.info('\tTotal ExaConstit runs (iterations) = ' + str(iter))
 logger.info("*******************************************************************")
 
 
