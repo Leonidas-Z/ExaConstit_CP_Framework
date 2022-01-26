@@ -5,7 +5,6 @@ import os
 import os.path
 import subprocess
 import sys
-import math
 import logging
 import pygad
 import Matgen_GA
@@ -112,7 +111,7 @@ def Objfun(x, solution_idx):  # f_max, x_max are not used currently
 
         ## Evaluate the objective function (sqrt of sum of squared differences b\w sim and expt 1st Moment)
         ## Keep the S_sim data in the log file and print f
-        f = -math.sqrt(sum((S_exp - S_sim)**2)/sum(S_exp)**2)
+        f = -np.sqrt(sum((S_exp - S_sim)**2)/sum(S_exp)**2)
         logger.info('Objective function result: f = %.11f' % (f))
         logger.debug('Macroscopic stress simulation output: \n\t'+str(S_sim))
 
