@@ -88,24 +88,25 @@ def Objfun(x, solution_idx):  # f_max, x_max are not used currently
             flag = 0  # simulation is successful
             logger.info('SUCCESSFUL SIMULATION, flag = %d' % (flag))
         # To mitigate unconverged results we will make S_exp same size as S_sim
-        elif S_sim_size < no_datapoints and S_sim_size > 5:
+        elif status != 0 and S_sim_size < no_datapoints:
             flag = 1  # partially successful
             logger.warning('WARNING: Simulation has unconverged results. \nOutput data are not the same as the time steps for iteration = %d' % (iter))
             logger.warning('The size of the output file row is %d when time steps are %d' % (S_sim_size, no_datapoints))
             logger.warning('flag = %d' % (flag))
             S_exp = S_exp[0:S_sim_size]
-        elif S_sim_size < 5:
-            flag = 2
-            logger.error('\nERROR: The simulation retrived less than 5 data. S_sim_size = %d'% (S_sim_size))
-            logger.error('ERROR: flag = %d' % (flag))
-            sys.exit('ERROR: PLEASE LOOK AT LOG FILE FOR MORE INFO')
+        elif status == 0 and S_sim_size < no_datapoints:
+            flag = 3 # failed
+            logger.error('\nERROR: Please use same time steps in simulation as the number of experimental data')
+            logger.error('ERRRO: flag = %d' % (flag))
+            logger.error('The rows of the output file are %d when time steps are %d' % (S_sim_size, no_datapoints))
+            sys.exit()
         elif S_sim_size > no_datapoints: 
-            flag = 3
+            flag = 4 # failed
             logger.error('\nERROR: Please use same or less time steps in simulation as the number of experimental data')
             logger.error('ERRRO: flag = %d' % (flag))
             logger.error('The size of the output file row is %d when time steps are %d' % (S_sim_size, no_datapoints))
             sys.exit()
-        # Check if the simulation data has strain at these increments using the same strain increments (one more error) 
+        # Future Implementation: Check if the simulation data has strain at these increments using the same strain increments (one more error) 
     
 
 
@@ -215,10 +216,12 @@ ga_instance.plot_genes(graph_type="plot",plot_type="plot",solutions="all")
 ga_instance.plot_genes(graph_type="boxplot",solutions='all')
 
 
-
+# Future implementation: Save best solution in a file - Save all the GA state in a file so to continue from where we left if the algorithm needs to terminate
 
 
 '''
+pyGAD options: 
+
 def on_generation(ga_instance):
     global last_fitness
     logger.info("Generation = {generation}".format(generation=ga_instance.generations_completed))
