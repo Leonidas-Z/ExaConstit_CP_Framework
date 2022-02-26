@@ -47,7 +47,7 @@ problem = ExaProb(n_obj=NOBJ,
 
 
 # Parameters related with Reference Points 
-P = 10
+P = 30
 # Scaling (None or 1 is the same)
 scaling = None 
 
@@ -61,7 +61,7 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4)); print("\nThe population number will be {}\n".format(MU))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 2                 
+NGEN = 10                
 
 # Operators related parameters
 CXPB = 1.0
