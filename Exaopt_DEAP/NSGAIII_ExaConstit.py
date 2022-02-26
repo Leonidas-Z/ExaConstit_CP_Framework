@@ -70,7 +70,7 @@ MUTPB = 1.0
 # Specify seed (if use checkpoint it doesn't matter)
 seed=10
 
-# Specify checkpoint frequency (generations per file)
+# Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
 checkpoint = None#"checkpoint_files/checkpoint_gen_6.pkl"
