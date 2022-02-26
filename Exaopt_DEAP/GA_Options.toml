@@ -1,0 +1,35 @@
+[GA_Framework_Inputs]
+    [GA_Framework_Inputs.File_Locations]
+        # Name of the options toml for exaconstit
+        options_toml = 'mtsdd_bcc.toml'
+        # File name of the macroscopic stress-strain simulation output
+        avg_stress_file_name = 'test_mtsdd_bcc_stress.txt'
+        # File name of the Experimental stress strain data with same stress units as in simulation
+        avg_exp_file_name = 'Experiment_strain_stress.txt'
+
+    [GA_Framework_Inputs.CPU_Number]
+        #======================================== ExaConstit Options ===========================================
+        # Number of cpus
+        ncpus = 4
+
+    [GA_Parameters]
+        # Number of generations
+        num_generations = 5
+        # Number of solutions to be selected as parents in the mating pool.
+        num_parents_mating = 3 # The number of parents that are mating, will give birth to sol_per_pop - num_parents_mating = children_number. Thus will do children_number iterations after the 0 generation which creates the initial_population = sol_per_pop.
+        # Number of solutions in the population (people).
+        sol_per_pop = 4
+        # Total iterations
+        total_iterations = (sol_per_pop - num_parents_mating) * (num_generations + 1) + sol_per_pop
+        # Number of the parameters
+        num_parameters_genes = 4
+        # Type of each parameter
+        gene_type = [int, [float,6], int, [float,6]]
+        # Set the lower and upper bounds of the CP parameters x
+        xlim0 = list(np.arange(1500, 2500, 1))
+        xlim1 = {'low': 1.0e-4, 'high': 10e-4}            # {'low': 1, 'high': 5} floating-point value from the range that starts from 1 (inclusive) and ends at 5 (exclusive).
+        xlim2 = list(np.arange(280, 320, 1))              # From 280 to 320 need to write: list(range(280,321)) or list(np.arange(280, 320, 1, dtype=int))
+        xlim3 = {'low': 1e-2, 'high': 5.0e-2}             # list(np.linspace(1e-2, 5.0e-2, 100))
+        gene_space = [xlim0, xlim1, xlim2, xlim3]
+        # Initial population
+        # initial_population = [np.array([x0]*sol_per_pop)]
