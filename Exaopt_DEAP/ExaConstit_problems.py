@@ -45,18 +45,10 @@ class ExaProb:
         self.logger = logging.getLogger()
 
         # Check if we have as many files as the objective functions
-        if not len(Exper_data_files) == n_obj:
-            self.logger.error('ERROR: The NOBJ: {}, is not the same with the number of Exper_data_files: {}'.format(n_obj,len(Exper_data_files)))
-            sys.exit('\nERROR: The NOBJ: {}, is not the same with the number of Exper_data_files: {}'.format(n_obj,len(Exper_data_files)))
-        if not len(Simul_data_files) == n_obj:
-            self.logger.error('\nERROR: The number of Simul_data_files: {}, is not the same with the number of NOBJ: {}'.format(len(Simul_data_files), n_obj))
-            sys.exit('\nERROR: The number of Simul_data_filess: {}, is not the same with the number of NOBJ: {}'.format(len(Simul_data_files), n_obj))
-        if not len(Toml_files) == n_obj:
-            self.logger.error('\nERROR: The number of Toml_files: {}, is not the same with the number of NOBJ: {}'.format(len(Toml_files), n_obj))
-            sys.exit('\nERROR: The number of Toml_files: {}, is not the same with the number of NOBJ: {}'.format(len(Toml_files), n_obj))
-        if not len(n_steps) == n_obj:
-            self.logger.error('\nERROR: The length of the n_steps list: {}, is not the same with the length of the Exper_data_files list: {}'.format(len(n_steps),len(Exper_data_files)))
-            sys.exit('\nERROR: The length of the n_steps list: {}, is not the same with the length of the Exper_data_files list: {}'.format(len(n_steps),len(Exper_data_files)))
+        for data, name in zip([n_steps, Exper_data_files, Toml_files, Simul_data_files],["n_steps", "Exper_data_files", "Toml_files", "Simul_data_files"]):
+            if not len(data)==n_obj:
+                self.logger.error('ERROR: The number of files assigned to "{}" is not equal to NOBJ={}'.format(name, n_obj))
+                sys.exit('\nERROR: The number of files assigned to "{}" is not equal to NOBJ={}'.format(name, n_obj))
 
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
