@@ -145,7 +145,7 @@ class ExaProb:
 
             # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
             if np.ndim(S_sim_data) > 1:
-                S_sim_stress_Z = S_sim_data[:, 0]           # Need to have a nice message if error here - not obvious!!!!!! The macroscopic stress in the direction of load is the 3rd column in the stress output (z axis)
+                S_sim_stress_Z = S_sim_data[:, 2]           # Need to have a nice message if error here - not obvious!!!!!! The macroscopic stress in the direction of load is the 3rd column in the stress output (z axis)
                 S_sim_stress_Z = np.unique(S_sim_stress_Z)
                 S_sim.append(S_sim_stress_Z)                # Save S_sim[k]
             else:
