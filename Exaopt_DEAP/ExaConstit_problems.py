@@ -4,11 +4,11 @@ import os.path
 import subprocess
 import logging
 import sys
-import Matgen_GA_Multiobj
+from MatGenerator import Matgen
 
 
 class ExaProb:
-    # This is the constructor of the CP_Optimization class
+    # This is the constructor of the objective function evaluation
     # All the assigned files must have same length with the n_obj 
     # (for each obj function we need a different Experiment data set etc.)
     # for loc_file and loc_mechanics, give absolutet paths
@@ -22,9 +22,9 @@ class ExaProb:
                  loc_mechanics ="./mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
-                 Exper_data_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
+                 Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
+                 Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'],
-                 Simul_data_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
                  ):
 
 
@@ -36,8 +36,8 @@ class ExaProb:
         #self.loc_output_files=loc_output_files
         self.loc_mechanics=loc_mechanics
         self.Toml_files = Toml_files
-        self.Simul_data_files = Simul_data_files
-        self.Exper_data_files = Exper_data_files 
+        self.Sim_output_files = Sim_output_files
+        self.Exper_input_files = Exper_input_files 
         self.iter = 0
         self.runs = 0
 
@@ -46,35 +46,34 @@ class ExaProb:
         self.logger = logging.getLogger()
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([n_steps, Exper_data_files, Toml_files, Simul_data_files],["n_steps", "Exper_data_files", "Toml_files", "Simul_data_files"]):
-            if not len(data)==n_obj:
-                self.logger.error('ERROR: The number of files assigned to "{}" is not equal to NOBJ={}'.format(name, n_obj))
-                sys.exit('\nERROR: The number of files assigned to "{}" is not equal to NOBJ={}'.format(name, n_obj))
+        for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files],["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files"]):
+            if len(data) != n_obj:
+                self.logger.error('ERROR: The length of "{}" is not equal to NOBJ={}'.format(name, n_obj))
+                sys.exit('\nERROR: The length of "{}" is not equal to NOBJ={}'.format(name, n_obj))
 
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
-        no_exper_data = []
         S_exp = []
+        no_exper_data = []
         for k in range(n_obj):
             try:
-                S_exp_data = np.loadtxt(Exper_data_files[k], dtype='float')
+                S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float')
+            except:
+                self.logger.error("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
+                sys.exit("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
 
-                # 0 column is the stress
-                S_exp_stress = S_exp_data#[:,0]   
+            # Assuming that each experment data file has only a stress column
+            S_exp_stress = S_exp_data   #[:,0]   
+            S_exp.append(S_exp_stress)
+            no_exper_data.append(len(S_exp_stress))
 
-                S_exp.append(S_exp_stress)
-                no_exper_data.append(len(S_exp_stress))
-
-                if not n_steps[k] == no_exper_data[k]:
-                    self.logger.error("ERROR: The length of the S_exp[{k}] is not the same with the assigned n_steps[{k}]".format(k=k))
-                    sys.exit("ERROR: The length of the S_exp[{k}] is not the same with the assigned n_steps[{k}]".format(k=k))
-            
-            except FileNotFoundError:
-                self.logger.error("ERROR: THE FILE {} WAS NOT FOUND!!!".format(Exper_data_files[k]))
-                sys.exit("\nERROR: THE FILE {} WAS NOT FOUND!!!".format(Exper_data_files[k]))
+            if n_steps[k] != no_exper_data[k]:
+                self.logger.error("ERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
+                sys.exit("\nERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
 
         self.no_exper_data=no_exper_data
         self.S_exp=S_exp
+
 
     def evaluate(self, x):
         
@@ -114,25 +113,20 @@ class ExaProb:
             self.logger.debug('\tExaConstit Runs: %d'% self.runs)
 
             # Delete file contents of the Simulation output file
-            if os.path.exists(self.Simul_data_files[k]):
-                file = open(self.Simul_data_files[k], 'r+')
+            if os.path.exists(self.Sim_output_files[k]):
+                file = open(self.Sim_output_files[k], 'r+')
                 file.truncate(0)
                 file.close()
 
             # Create mat file: props_cp_mts.txt and use the file for multiobj if more files 
-            if self.n_obj > 1:
-                try:
-                    Matgen_GA_Multiobj.Matgen(x_indep, x_dep[k])
-                except FileNotFoundError:
-                    self.logger.error("ERROR: No material properties file has been found!!!")
-                    sys.exit('\nERROR: NO MATERIAL PROPERTIES FILE WAS FOUND')
-            elif self.n_obj == 1:
-                try:
-                    pass
-                    #Matgen_GA.Matgen(x)
-                except FileNotFoundError:
-                    self.logger.error("ERROR: No material properties file has been found!!!")
-                    sys.exit('\nERROR: NO MATERIAL PROPERTIES FILE WAS FOUND')
+            try:
+                if self.n_obj > 1:
+                    Matgen(x_indep, x_dep[k])
+                else:
+                    Matgen(x)
+            except:
+                self.logger.error("ERROR: Unable to generate material properties using Matgen!")
+                sys.exit("\nERROR: Unable to generate material properties using Matgen!")
 
 
             # Call ExaConstit to run the CP simulation
@@ -145,11 +139,11 @@ class ExaProb:
 
 
             # Read the simulation output
-            if os.path.exists(self.Simul_data_files[k]):
-                S_sim_data = np.loadtxt(self.Simul_data_files[k], dtype='float')
+            if os.path.exists(self.Sim_output_files[k]):
+                S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float')
             else:
-                self.logger.error('\nERROR: Output file was not generated at iteration = %d ' % (iter)+ 'at exaCosntit run k = %d' % (k))
-                sys.exit('\nERROR: NO OUTPUT FILE FROM SIMULATION WAS GENERATED')
+                self.logger.error('\nERROR: Output file was not generated! iteration = %d, ' % (iter)+ 'Exper_input_files[%d]'%(k))
+                sys.exit('\nERROR: Output file was not generated! iteration = %d, ' % (iter)+ 'Exper_input_files[%d]'%(k))
 
             # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
             if np.ndim(S_sim_data) > 1:
@@ -168,8 +162,8 @@ class ExaProb:
             if status == 0 and no_sim_data[k] == self.no_exper_data[k]:
                 self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
             else:
-                self.logger.info('\nERROR: The simulation for file k = %d different number of data points than the experimental data. no_sim_data = %d'% (k, no_sim_data[k]))
-                sys.exit('\nERROR: PLEASE LOOK AT GA_LOG FILE FOR MORE INFO')
+              self.logger.info('\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data = {l}'.format(k=k, l=no_sim_data[k]))
+              sys.exit('\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data = {l}'.format(k=k, l=no_sim_data[k]))
           
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
