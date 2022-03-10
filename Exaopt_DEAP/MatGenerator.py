@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-def Matgen(x_indep, x_dep):
+def Matgen(x_indep, x_dep=None, voce=False, fname='props_cp_mts.txt'):
+    # If 1 obj function then x_dep should not be used
     # Whether or not you're using voce models
     voce = False
     # File location
