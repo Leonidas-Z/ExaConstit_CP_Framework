@@ -57,13 +57,13 @@ class ExaProb:
         no_exper_data = []
         for k in range(n_obj):
             try:
-                S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float')
+                S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float', ndmin=2)
             except:
                 self.logger.error("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
                 sys.exit("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
 
             # Assuming that each experment data file has only a stress column
-            S_exp_stress = S_exp_data   #[:,0]   
+            S_exp_stress = S_exp_data[:,0]   
             S_exp.append(S_exp_stress)
             no_exper_data.append(len(S_exp_stress))
 
@@ -137,24 +137,20 @@ class ExaProb:
             # if that is a desired behavior
             status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
 
-
-            # Read the simulation output
-            if os.path.exists(self.Sim_output_files[k]):
-                S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float')
-            else:
-                self.logger.error('\nERROR: Output file was not generated! iteration = %d, ' % (iter)+ 'Exper_input_files[%d]'%(k))
-                sys.exit('\nERROR: Output file was not generated! iteration = %d, ' % (iter)+ 'Exper_input_files[%d]'%(k))
-
-            # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
-            if np.ndim(S_sim_data) > 1:
-                S_sim_stress_Z = S_sim_data[:, 2]           # Need to have a nice message if error here - not obvious!!!!!! The macroscopic stress in the direction of load is the 3rd column in the stress output (z axis)
-                S_sim_stress_Z = np.unique(S_sim_stress_Z)
-                S_sim.append(S_sim_stress_Z)                # Save S_sim[k]
-            else:
-                S_sim_stress_Z = S_sim_data[2]              # if 1D array
-                S_sim.append(S_sim_stress_Z)                
             
-            no_sim_data.append(len(S_sim_stress_Z))         # Save final size of S_sim[k] 
+            # Read the simulation output
+            # If output file exists and it is not empty, read stress
+            if os.path.exists(self.Sim_output_files[k]) and os.stat(self.Sim_output_files[k]).st_size!=0:
+                S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
+
+                # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
+                S_sim_stress_Z = S_sim_data[:, 2]               # Macroscopic stress in the direction of load: 3rd column (z axis)
+                S_sim_stress_Z = np.unique(S_sim_stress_Z)
+                S_sim.append(S_sim_stress_Z)    
+                no_sim_data.append(len(S_sim_stress_Z))         # Save final size of S_sim[k] 
+            else:
+                self.logger.error('\nERROR: Simulation did not run! iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
+                sys.exit('\nERROR: Simulation did not run! \niteration = {}, Exper_input_files[{}]'.format(self.iter,k))
 
 
             ############## Need more thought!!!!!!!!
