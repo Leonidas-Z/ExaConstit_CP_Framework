@@ -41,9 +41,9 @@ problem = ExaProb(n_obj=NOBJ,
                   #x_indep=[],
                   ncpus = 3,
                   #loc_mechanics_bin ="",
-                  Exper_data_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'],
-                  Simul_data_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'])
+                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
+                  Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
+                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'])
 
 
 # Parameters related with Reference Points 
@@ -61,9 +61,9 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4)); print("\nThe population number will be {}\n".format(MU))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 10                
+NGEN = 10
 
-# Operators related parameters
+# GA operator related parameters
 CXPB = 1.0
 MUTPB = 1.0
 
@@ -73,7 +73,7 @@ seed=10
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = None#"checkpoint_files/checkpoint_gen_6.pkl"
+checkpoint = None #"checkpoint_files/checkpoint_gen_10.pkl"
 
 
 
