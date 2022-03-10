@@ -1,7 +1,4 @@
-from math import dist
 import numpy as np
-import autograd.numpy as anp
-
 
 class BestSol:
 
@@ -42,17 +39,3 @@ class BestSol:
         best_idx = np.argmin(dist)
 
         return best_idx
-
-
-
-    '''
-    def DIST_WEIGHTS(self, weights, utopian_point):
-        
-        norm = anp.linalg.norm(weights, axis=1)
-        self.pop_fit = self.pop_fit - utopian_point
-
-        d1 = (self.pop_fit * weights).sum(axis=1) / norm
-        d2 = anp.linalg.norm(self.pop_fit - (d1[:, None] * weights / norm[:, None]), axis=1)
-
-        return d1, d2
-    '''
