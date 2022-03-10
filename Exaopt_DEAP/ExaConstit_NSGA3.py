@@ -123,7 +123,7 @@ toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
 
 #================================ Evolution Algorithm ===========================
 # Here we construct our main algorithm NSGAIII
-def main(checkpoint_freq, checkpoint=None, seed=None):
+def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
     # Initialize statistics object
     stats2 = tools.Statistics()
