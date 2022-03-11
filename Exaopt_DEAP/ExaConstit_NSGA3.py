@@ -10,7 +10,7 @@ from SolutionPicker import BestSol
 ##### ExaConstit Optimization Routine (LZ) #####
 
 # This script is using the NSGAIII algorithm from the DEAP module and intends
-# to optimize Crystal Plasticity Parameters calling the ExaConstit simulation 
+# to optimize Crystal Plasticity Parameters calling the ExaConstit simulation
 # program via ExaProb class.
 
 # The method that the objective functions are calculated can be found in 
