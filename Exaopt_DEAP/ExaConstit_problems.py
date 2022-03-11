@@ -19,7 +19,7 @@ class ExaProb:
                  x_dep=[],
                  x_indep=[],
                  ncpus = 4,
-                 loc_mechanics ="./mechanics",
+                 loc_mechanics ="~/ExaConstit/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
@@ -130,12 +130,10 @@ class ExaProb:
 
 
             # Call ExaConstit to run the CP simulation
-            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_data_files[k])
-            # spack loading portion wasn't needed do this outside the python script and then you're good to go
+            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_input_files[k])
+            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            # quite all the stdout from this. We could have this saved off to a logger potentially or to a given output file
-            # if that is a desired behavior
-            status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
+            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True)
 
             
             # Read the simulation output
@@ -149,8 +147,8 @@ class ExaProb:
                 S_sim.append(S_sim_stress_Z)    
                 no_sim_data.append(len(S_sim_stress_Z))         # Save final size of S_sim[k] 
             else:
-                self.logger.error('\nERROR: Simulation did not run! iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
-                sys.exit('\nERROR: Simulation did not run! \niteration = {}, Exper_input_files[{}]'.format(self.iter,k))
+                self.logger.error('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
+                sys.exit('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
 
 
             ############## Need more thought!!!!!!!!
