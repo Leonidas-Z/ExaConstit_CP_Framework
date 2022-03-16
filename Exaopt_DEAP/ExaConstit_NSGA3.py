@@ -6,6 +6,7 @@ import pickle
 from ExaConstit_problems import ExaProb
 from PlotMaker import ExaPlots
 from SolutionPicker import BestSol
+#from scoop import futures
 
 ##### ExaConstit Optimization Routine (LZ) #####
 
@@ -25,20 +26,35 @@ from SolutionPicker import BestSol
 #============================== Input Parameters ================================
 # Problem Parameters
 # Number of obj functions
-NOBJ = 2    
-# The dependent parameters are included (the first 3 are the only independent)
-BOUND_LOW =[1500, 1.0e-4, 1e-2   , 1e-3,    1e-4   , 1e-5    , 1e-3,    1e-4   , 1e-5]
-BOUND_UP  =[2500, 10e-4 , 10.0e-2, 10.0e-3, 10.0e-4, 10.0e-5 , 10.0e-3, 10.0e-4, 10.0e-5]
-# Number of parameters or dimensions or genes
-NDIM = len(BOUND_LOW) 
+NOBJ = 2
+
+# Specify independent (athermal parameters)
+IND_LOW = [1500, 1.0e-4, 1e-2]
+IND_UP  = [2500, 10e-4 , 10.0e-2]
+# Specify dependent (thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
+DEP_LOW = [1e-3,    1e-4   , 1e-5]
+DEP_UP = [10.0e-3, 10.0e-4, 10.0e-5]
 
 
-# Assign ExaProb class and assign the arguments for the ExaConstit simulations
-# Which of them are dependent
+# Final Bounds
+BOUND_LOW = IND_LOW
+BOUND_UP = IND_UP
+if (DEP_LOW != None) and (DEP_UP != None):
+    for i in range(NOBJ):
+        BOUND_LOW.extend(DEP_LOW)
+        BOUND_UP.extend(DEP_UP)
+    n_dep = len(DEP_LOW)
+else:
+    n_dep = None # no dependent parameters
+
+# Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
+NDIM = len(BOUND_LOW)
+
+
+# Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
+                  n_dep=n_dep,
                   n_steps=[20,20],
-                  #x_dep=[],
-                  #x_indep=[],
                   ncpus = 20,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
@@ -53,27 +69,28 @@ scaling = None
 
 # Number of Reference Points (NSGAIII paper)
 H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))  
-print("\nThe number of reference points will be {}\n".format(H))
+print("\nThe number of reference points will be {}".format(H))
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 
 # Population number (NSGAIII paper)
-MU = int(H + (4 - H % 4)); print("\nThe population number will be {}\n".format(MU))
+MU = int(H + (4 - H % 4))
+print("The population number will be {}\n".format(MU))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 10
+NGEN = 31
 
 # GA operator related parameters
 CXPB = 1.0
 MUTPB = 1.0
 
 # Specify seed (if use checkpoint it doesn't matter)
-seed=10
+seed=2
 
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = None #"checkpoint_files/checkpoint_gen_10.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_10.pkl"
 
 
 
@@ -105,7 +122,8 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 # Function that instatly produces MU individuals (population). We assign the attribute number_of_population at the main function in this problem
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
+# Multiprocessing
+#toolbox.register("map", futures.map)
 
 
 #=========================== Initialize GA Operators ============================
@@ -162,7 +180,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     else:
         # Specify seed (need both numpy and random OR change niching in DEAP script)
         random.seed(seed)  
-        #numpy.random.seed(seed) 
+        numpy.random.seed(seed) 
 
         # Initialize logs and open log files
         logbook1 = tools.Logbook()
