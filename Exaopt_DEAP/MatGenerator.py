@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-def Matgen(x_indep, x_dep=None, voce=False, fname='props_cp_mts.txt'):
+def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
     # If 1 obj function then x_dep should not be used
     # Whether or not you're using voce models
     voce = False
@@ -86,9 +86,9 @@ def Matgen(x_indep, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         # append it to to the hard_params or just loop through
         # and append the same value to hard_params for the number
         # of slip systems.
-        c1 = x_indep[0] #1.944106926e3
+        c1 = x_ind[0] #1.944106926e3
         hard_params.append(c1)
-        tau_pb = x_indep[1] #4.0e-4
+        tau_pb = x_ind[1] #4.0e-4
         hard_params.append(tau_pb)
         p = 1.0
         hard_params.append(p)
@@ -98,7 +98,7 @@ def Matgen(x_indep, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         hard_params.append(ref_gdot_therm)
         ref_gdot_drag = 1.0
         hard_params.append(ref_gdot_drag)
-        ref_drag_stress = x_indep[2] #3.0e-2
+        ref_drag_stress = x_ind[2] #3.0e-2
         hard_params.append(ref_drag_stress)
         # This param is defined for each slip system for HCP so
         # you need to either bulild it up as one big array and
