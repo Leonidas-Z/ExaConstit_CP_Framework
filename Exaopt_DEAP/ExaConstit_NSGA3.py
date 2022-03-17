@@ -64,19 +64,16 @@ problem = ExaProb(n_obj=NOBJ,
 
 
 # Parameters related with Reference Points 
-P = 2
+P = 10
 # Scaling (None or 1 is the same)
 scaling = None 
 
 # Number of Reference Points (NSGAIII paper)
 H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))  
-print("\nThe number of reference points will be {}".format(H))
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
-
 # Population number (NSGAIII paper)
-MU = 2#int(H + (4 - H % 4))
-print("The population number will be {}\n".format(MU))
+MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
 NGEN = 1
@@ -91,7 +88,14 @@ seed=2
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = None#"checkpoint_files/checkpoint_gen_10.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_2.pkl"
+
+
+
+print("\nThe number of reference points will be {}".format(H))
+print("The population number will be {}".format(MU))
+print("The number of objective functions will be {}".format(NOBJ))
+print("The number of parameters will be {}\n".format(NDIM))
 
 
 
@@ -148,9 +152,6 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     stats1.register("std", numpy.std, axis=0)
     stats1.register("min", numpy.min, axis=0)
     stats1.register("max", numpy.max, axis=0)
-    stats2 = tools.Statistics()
-    stats2.register("solutions", list)
-
 
     # If checkpoint has a file name, read and retrieve the state of last checkpoint from this file
     # If not then start from the beginning by generating the initial population
@@ -163,6 +164,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Retrieve the state of the last checkpoint
         pop = ckp["population"]
+        pop_fit = ckp["pop_fit"]
+        pop_sol = ckp["pop_sol"]
         iter_tot = ckp["iter_tot"]
         start_gen = ckp["generation"] + 1
         if start_gen>NGEN: gen = start_gen
@@ -170,7 +173,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logbook2 = ckp["logbook2"]
 
         # Open log files and erase their contents
-        logfile1 = open("logbook1_gen.log","w+")
+        logfile1 = open("logbook1_stats.log","w+")
         logfile1.write("loaded checkpoint: {}\n".format(checkpoint))
         logfile2 = open("logbook2_solutions.log","w+")
         logfile2.write("loaded checkpoint: {}\n".format(checkpoint))
@@ -182,7 +185,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         
         # Initilize loggers
         logbook1 = tools.Logbook()
-        logfile1 = open("logbook1_gen.log","w+")
+        logfile1 = open("logbook1_stats.log","w+")
         logbook2 = tools.Logbook()
         logfile2 = open("logbook2_solutions.log","w+")
 
@@ -194,35 +197,44 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
         # Maps the fitness with the invalid_ind. Initiates the obj function calculation for each invalid_ind
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]   
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)        
+        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)        
         
         # Initialize iterations
         iter_pgen = 0  # iterations per generation
         iter_tot = 0   # total iterations
         start_gen = 1  # starting generation
+        fitness_gen = []
+        solution_gen = []
+        pop_fit = []
+        pop_sol = []
 
         # Evaluates the fitness for each invalid_ind and assigns them the new values
-        for ind, fit in zip(invalid_ind, fitnesses): 
+        for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
 
         # Initialize and compile statistics about the population
-        logbook1.header = "gen", "runs", "std", "min", "avg", "max"
+        logbook1.header = "gen", "simRuns", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, evals=len(invalid_ind), **record)
+        logbook1.record(gen=0, simRuns=iter_pgen, **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
-        logbook2.header = "gen", "solutions"
+        logbook2.header = "gen", "fitness", "solutions"
         for ind in pop:
-            record = stats2.compile(ind)
-            logbook2.record(gen=0, **record)
+            logbook2.record(gen=0, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
+            fitness_gen.append(tuple(ind.fitness.values))
+            solution_gen.append(tuple(ind))
+            
+        # Keep fitnesses and solutions for every gen in a list
+        pop_fit.append(fitness_gen)
+        pop_sol.append(solution_gen)
 
     # Begin the generational process
     for gen in range(start_gen, NGEN+1):
           
-        logfile1 = open("logbook1_gen.log","a+")
+        logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
 
         # Produce offsprings
@@ -235,11 +247,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Invalid_ind are those which their fitness value has not been calculated 
         # Evaluates the obj functions for each invalid_ind (here we have 3 obj function thus it does 3 computations)
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]     
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)                
+        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)                
 
         # Assign the new values in the individuals
         iter_pgen = 0 
-        for ind, fit in zip(invalid_ind, fitnesses):                      
+        for ind, fit in zip(invalid_ind, fitness_eval):                      
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
@@ -251,38 +263,41 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Compile statistics about the new population
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, evals=len(invalid_ind), **record)
+        logbook1.record(gen=gen, simRuns=iter_pgen, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
-        for ind in pop:
-            record = stats2.compile(ind)
-            logbook2.record(gen=gen, **record)
+        fitness_gen=[]
+        solution_gen=[]
+        for ind in pop: 
+            logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
+            fitness_gen.append(tuple(ind.fitness.values))
+            solution_gen.append(tuple(ind))
+            
+        # Keep fitnesses and solutions for every gen in a list
+        pop_fit.append(fitness_gen)
+        pop_sol.append(solution_gen)
 
         # Generate a checkpoint file
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
-            ckp = dict(population=pop, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
+            ckp = dict(population=pop, pop_fit = pop_fit, pop_sol=pop_sol, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
     
     logfile1.close()
     logfile2.close()
 
-    return pop, gen, iter_tot
+    return iter_tot, pop_fit, pop_sol
 
 
 # Call the optimization routine
-last_pop, gen, iter_tot = main(seed, checkpoint, checkpoint_freq)
-
+iter_tot, pop_fit, pop_sol = main(seed, checkpoint, checkpoint_freq)
 
 
 #================================ Post Processing ===================================
-# Save the objective function values of the last (best) population
-pop_fit = []
-for ind, k in zip(last_pop, range(len(last_pop))):
-    pop_fit.append(ind.fitness.values)
-
+# Choose which generation you want to show in plots
+pop_fit = pop_fit[-1]  # here we chose the last gen (best)
 pop_fit = numpy.array(pop_fit) 
 
 
@@ -297,6 +312,7 @@ elif NOBJ == 3:
     plot1 = ExaPlots.ObjFun3D(ref_points, pop_fit, best_idx)
 else:
     pass
+
 
 #print(pop_fit)
 #print(best_idx)
