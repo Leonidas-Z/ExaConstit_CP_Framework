@@ -16,8 +16,7 @@ class ExaProb:
     def __init__(self,
                  n_obj,
                  n_steps,
-                 x_dep=[],
-                 x_indep=[],
+                 n_dep = None,
                  ncpus = 4,
                  loc_mechanics ="./mechanics",
                  #loc_input_files = "",
@@ -29,8 +28,7 @@ class ExaProb:
 
 
         self.n_obj = n_obj
-        self.x_dep = x_dep
-        self.x_indep = x_indep
+        self.n_dep = n_dep
         self.ncpus = ncpus
         #self.loc_input_files=loc_input_files
         #self.loc_output_files=loc_output_files
@@ -77,7 +75,6 @@ class ExaProb:
 
     def evaluate(self, x):
         
-        #logger.info('INFO: Iteration: %d', iter)
         # Iteration and logger info down below modifies class
         # In a parallel environment if we want the same behavior as down
         # below, we will need some sort of lock associated with things.
@@ -91,14 +88,24 @@ class ExaProb:
         # We could do the same for objective function fits as well. Once, a given iteration is
         # finished we could do a mpi_send of the data to rank 0 which could then save everything
         # off to a single file... (not sure if this is possible within DEAP)
-        self.iter += 1 
-        self.logger.info('INFO: Iteration: %d', self.iter) 
-        self.logger.info("\t\tSolution: x = "+str(x))  
 
-        # Specify elements of x as x_indep and x_dep for all files
-        x_indep = x[0:3]          # Specify indep. array positions. Here first 3
-        x_dep = [x[3:6], x[6:]]   # Specify dep array postions for every k
-        
+
+        # Separate parameters into dependent (thermal) and independent (athermal) groups
+        # x_group[0] will be the independent group. The rest will be the dependent groups for each objective
+        if self.n_dep != None:
+            n_ind=len(x) - self.n_obj*self.n_dep
+            x_dep=x[n_ind:]
+            x_group=[x[0:n_ind]]
+            x_group.extend([x_dep[k:k+self.n_dep] for k in range(0, len(x_dep), self.n_dep)])
+        else:
+            n_ind=len(x)
+            x_group=[x[0:n_ind]]
+
+        # Count iterations and save solutions
+        self.iter += 1 
+        self.logger.info("INFO: Iteration: {}".format(self.iter))
+        self.logger.info("\t\tSolution: x = {}".format(x_group))  
+
         # Initialize
         S_sim = []  
         no_sim_data = []
@@ -120,22 +127,20 @@ class ExaProb:
 
             # Create mat file: props_cp_mts.txt and use the file for multiobj if more files 
             try:
-                if self.n_obj > 1:
-                    Matgen(x_indep, x_dep[k])
+                if self.n_dep != None:
+                    Matgen(x_ind=x_group[0], x_dep=x_group[k+1])
                 else:
-                    Matgen(x)
+                    Matgen(x_ind=x_group[0])
             except:
                 self.logger.error("ERROR: Unable to generate material properties using Matgen!")
                 sys.exit("\nERROR: Unable to generate material properties using Matgen!")
 
 
             # Call ExaConstit to run the CP simulation
-            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_data_files[k])
-            # spack loading portion wasn't needed do this outside the python script and then you're good to go
+            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_input_files[k])
+            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            # quite all the stdout from this. We could have this saved off to a logger potentially or to a given output file
-            # if that is a desired behavior
-            status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
+            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL)#, stderr=subprocess.DEVNULL)
 
             
             # Read the simulation output
@@ -149,8 +154,8 @@ class ExaProb:
                 S_sim.append(S_sim_stress_Z)    
                 no_sim_data.append(len(S_sim_stress_Z))         # Save final size of S_sim[k] 
             else:
-                self.logger.error('\nERROR: Simulation did not run! iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
-                sys.exit('\nERROR: Simulation did not run! \niteration = {}, Exper_input_files[{}]'.format(self.iter,k))
+                self.logger.error('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
+                sys.exit('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
 
 
             ############## Need more thought!!!!!!!!
