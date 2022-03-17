@@ -76,7 +76,7 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 1
+NGEN = 5
 
 # GA operator related parameters
 CXPB = 1.0
@@ -88,7 +88,7 @@ seed=2
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = "checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint = None #"checkpoint_files/checkpoint_gen_2.pkl"
 
 
 

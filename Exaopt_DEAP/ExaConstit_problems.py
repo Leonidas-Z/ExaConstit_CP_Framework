@@ -18,7 +18,7 @@ class ExaProb:
                  n_steps,
                  n_dep = None,
                  ncpus = 4,
-                 loc_mechanics ="~/ExaConstit/ExaConstit/build/bin/mechanics",
+                 loc_mechanics ="./mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
@@ -140,7 +140,7 @@ class ExaProb:
             self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_input_files[k])
             init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL)#, stderr=subprocess.DEVNULL)
 
             
             # Read the simulation output
