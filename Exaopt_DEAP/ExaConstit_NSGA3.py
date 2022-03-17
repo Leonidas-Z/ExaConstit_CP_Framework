@@ -1,5 +1,6 @@
 from deap import creator, base, tools, algorithms
 import numpy
+import pandas
 import random
 from math import factorial
 import pickle
@@ -63,7 +64,7 @@ problem = ExaProb(n_obj=NOBJ,
 
 
 # Parameters related with Reference Points 
-P = 30
+P = 2
 # Scaling (None or 1 is the same)
 scaling = None 
 
@@ -74,11 +75,11 @@ print("\nThe number of reference points will be {}".format(H))
 ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 
 # Population number (NSGAIII paper)
-MU = int(H + (4 - H % 4))
+MU = 2#int(H + (4 - H % 4))
 print("The population number will be {}\n".format(MU))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 31
+NGEN = 1
 
 # GA operator related parameters
 CXPB = 1.0
@@ -90,7 +91,7 @@ seed=2
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = "checkpoint_files/checkpoint_gen_10.pkl"
+checkpoint = None#"checkpoint_files/checkpoint_gen_10.pkl"
 
 
 
@@ -110,8 +111,6 @@ def uniform(low, up, size=None):
         return [random.uniform(a, b) for a, b in zip(low, up)]
     except TypeError:
         return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-#print(uniform(BOUND_LOW, BOUND_UP))
-#problem.evaluate(uniform(BOUND_LOW, BOUND_UP))
 
 
 #### Population generator
@@ -144,19 +143,19 @@ toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
 def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
     # Initialize statistics object
-    stats2 = tools.Statistics()
-    stats2.register("fit", list)
     stats1 = tools.Statistics(lambda ind: ind.fitness.values)
     stats1.register("avg", numpy.mean, axis=0)
     stats1.register("std", numpy.std, axis=0)
     stats1.register("min", numpy.min, axis=0)
     stats1.register("max", numpy.max, axis=0)
+    stats2 = tools.Statistics()
+    stats2.register("solutions", list)
 
 
     # If checkpoint has a file name, read and retrieve the state of last checkpoint from this file
     # If not then start from the beginning by generating the initial population
     if checkpoint:
-        with open(checkpoint,"rb") as ckp_file:
+        with open(checkpoint,"rb+") as ckp_file:
             ckp = pickle.load(ckp_file)
 
         # Retrieve random state
@@ -169,28 +168,23 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         if start_gen>NGEN: gen = start_gen
         logbook1 = ckp["logbook1"]
         logbook2 = ckp["logbook2"]
+
         # Open log files and erase their contents
         logfile1 = open("logbook1_gen.log","w+")
-        logfile2 = open("logbook2_iter.log","w+")
-        logfile1.truncate(0) 
-        logfile2.truncate(0)
-        logfile1.write("Loaded checkpoint: {}\n".format(checkpoint))
-        logfile2.write("Loaded checkpoint: {}\n".format(checkpoint))
+        logfile1.write("loaded checkpoint: {}\n".format(checkpoint))
+        logfile2 = open("logbook2_solutions.log","w+")
+        logfile2.write("loaded checkpoint: {}\n".format(checkpoint))
 
     else:
         # Specify seed (need both numpy and random OR change niching in DEAP script)
         random.seed(seed)  
         numpy.random.seed(seed) 
-
-        # Initialize logs and open log files
+        
+        # Initilize loggers
         logbook1 = tools.Logbook()
-        logbook2 = tools.Logbook()
-        logbook1.header = "gen", "runs", "std", "min", "avg", "max"
-        logbook2.header = "gen", "iter_pgen", "iter_tot", "fit"
         logfile1 = open("logbook1_gen.log","w+")
-        logfile2 = open("logbook2_iter.log","w+")
-        logfile1.truncate(0)
-        logfile2.truncate(0)
+        logbook2 = tools.Logbook()
+        logfile2 = open("logbook2_solutions.log","w+")
 
         # Produce initial population
         # We use the registered "population" method MU times and produce the population
@@ -212,19 +206,24 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
-            # Compile stastics about the obj. function and store to files
-            record = stats2.compile(ind.fitness.values)
-            logbook2.record(gen=0, iter_pgen=iter_pgen, iter_tot=iter_tot, **record)
-            logfile2.write("{}\n".format(logbook2.stream))
-        
-        # Compile statistics about the population
+
+        # Initialize and compile statistics about the population
+        logbook1.header = "gen", "runs", "std", "min", "avg", "max"
         record = stats1.compile(pop)
         logbook1.record(gen=0, evals=len(invalid_ind), **record)
         logfile1.write("{}\n".format(logbook1.stream))
-
+        
+        logbook2.header = "gen", "solutions"
+        for ind in pop:
+            record = stats2.compile(ind)
+            logbook2.record(gen=0, **record)
+            logfile2.write("{}\n".format(logbook2.stream))
 
     # Begin the generational process
     for gen in range(start_gen, NGEN+1):
+          
+        logfile1 = open("logbook1_gen.log","a+")
+        logfile2 = open("logbook2_solutions.log","a+")
 
         # Produce offsprings
         # varAnd does the previously registered crossover and mutation methods. 
@@ -244,11 +243,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
-            # Compile stastics about the obj. function and store to files
-            record = stats2.compile(ind.fitness.values)
-            logbook2.record(gen=gen, iter_pgen=iter_pgen, iter_tot=iter_tot, **record)
-            logfile2.write("{}\n".format(logbook2.stream))
-
+    
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
@@ -259,13 +254,18 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logbook1.record(gen=gen, evals=len(invalid_ind), **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
+        for ind in pop:
+            record = stats2.compile(ind)
+            logbook2.record(gen=gen, **record)
+            logfile2.write("{}\n".format(logbook2.stream))
+
         # Generate a checkpoint file
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
             ckp = dict(population=pop, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
-            with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb") as ckp_file:
+            with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
-
+    
     logfile1.close()
     logfile2.close()
 
