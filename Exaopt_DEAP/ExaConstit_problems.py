@@ -137,10 +137,12 @@ class ExaProb:
 
 
             # Call ExaConstit to run the CP simulation
-            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_input_files[k])
-            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
+            self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_data_files[k])
+            # spack loading portion wasn't needed do this outside the python script and then you're good to go
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL)#, stderr=subprocess.DEVNULL)
+            # quite all the stdout from this. We could have this saved off to a logger potentially or to a given output file
+            # if that is a desired behavior
+            status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
 
             
             # Read the simulation output
