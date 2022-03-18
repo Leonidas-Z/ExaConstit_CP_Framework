@@ -18,7 +18,7 @@ class ExaProb:
                  n_steps,
                  n_dep = None,
                  ncpus = 4,
-                 loc_mechanics ="./mechanics",
+                 loc_mechanics ="~/ExaConstit/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
@@ -52,7 +52,6 @@ class ExaProb:
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
         S_exp = []
-        no_exper_data = []
         for k in range(n_obj):
             try:
                 S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float', ndmin=2)
@@ -61,15 +60,13 @@ class ExaProb:
                 sys.exit("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
 
             # Assuming that each experment data file has only a stress column
-            S_exp_stress = S_exp_data[:,0]   
+            S_exp_stress = tuple(S_exp_data[:,0])   
             S_exp.append(S_exp_stress)
-            no_exper_data.append(len(S_exp_stress))
 
-            if n_steps[k] != no_exper_data[k]:
+            if n_steps[k] != len(S_exp_stress):
                 self.logger.error("ERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
                 sys.exit("\nERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
 
-        self.no_exper_data=no_exper_data
         self.S_exp=S_exp
 
 
@@ -107,8 +104,7 @@ class ExaProb:
         self.logger.info("\t\tSolution: x = {}".format(x_group))  
 
         # Initialize
-        S_sim = []  
-        no_sim_data = []
+        self.S_sim = [] 
         f = np.zeros(self.n_obj)
 
         # Run k simulations. One for each objective function
@@ -140,7 +136,7 @@ class ExaProb:
             self.logger.info('\tWaiting ExaConstit for file %s ......'% self.Exper_input_files[k])
             init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL)#, stderr=subprocess.DEVNULL)
+            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             
             # Read the simulation output
@@ -149,10 +145,9 @@ class ExaProb:
                 S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
 
                 # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
-                S_sim_stress_Z = S_sim_data[:, 2]               # Macroscopic stress in the direction of load: 3rd column (z axis)
-                S_sim_stress_Z = np.unique(S_sim_stress_Z)
-                S_sim.append(S_sim_stress_Z)    
-                no_sim_data.append(len(S_sim_stress_Z))         # Save final size of S_sim[k] 
+                S_sim = S_sim_data[:, 2]               # Macroscopic stress in the direction of load: 3rd column (z axis)
+                S_sim = np.unique(S_sim)
+                self.S_sim.append(tuple(S_sim))        # save stresses in a parameter for each iteration
             else:
                 self.logger.error('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
                 sys.exit('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter,k))
@@ -160,7 +155,9 @@ class ExaProb:
 
             ############## Need more thought!!!!!!!!
             # Check if data size is the same with experiment data-set in case there is a convergence issue
-            if status == 0 and no_sim_data[k] == self.no_exper_data[k]:
+            no_sim_data=len(self.S_sim[k]) 
+            no_exp_data=len(self.S_exp[k])
+            if status == 0 and no_sim_data == no_exp_data:
                 self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
             else:
               self.logger.info('\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data = {l}'.format(k=k, l=no_sim_data[k]))
@@ -169,10 +166,19 @@ class ExaProb:
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
-            S_exp = self.S_exp
-            f[k] = np.sqrt(sum((1 - abs(S_sim[k]/S_exp[k]))**2)/len(S_exp[k]))   
+            S_exp = np.array(self.S_exp[k])
+            S_sim = np.array(self.S_sim[k])
+
+            f[k] = np.sqrt(sum((1 - abs(S_sim/S_exp))**2)/len(S_exp))   
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))
         
         self.logger.info('')
+        
+        self.stress = [] 
+        self.stress.append(self.S_exp)
+        self.stress.append(self.S_sim)
 
         return f
+        
+    def returnStress(self):
+        return self.stress

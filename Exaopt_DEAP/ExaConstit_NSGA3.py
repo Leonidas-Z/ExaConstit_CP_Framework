@@ -64,7 +64,7 @@ problem = ExaProb(n_obj=NOBJ,
 
 
 # Parameters related with Reference Points 
-P = 10
+P = 20
 # Scaling (None or 1 is the same)
 scaling = None 
 
@@ -76,7 +76,7 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 5
+NGEN = 15
 
 # GA operator related parameters
 CXPB = 1.0
@@ -88,14 +88,14 @@ seed=2
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = None #"checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint = None #"checkpoint_files/checkpoint_gen_1.pkl"
 
 
-
-print("\nThe number of reference points will be {}".format(H))
-print("The population number will be {}".format(MU))
-print("The number of objective functions will be {}".format(NOBJ))
-print("The number of parameters will be {}\n".format(NDIM))
+print("\nNumber of objective functions = {}".format(NOBJ))
+print("Number of reference points = {}".format(H))
+print("Population size = {}".format(MU))
+print("Number of generations = {}".format(NGEN))
+print("Number of parameters = {}\n".format(NDIM))
 
 
 
@@ -103,7 +103,7 @@ print("The number of parameters will be {}\n".format(NDIM))
 # Create minimization problem (multiply -1 weights)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 # Create the Individual class that it has also the fitness (obj function results) as a list
-creator.create("Individual", list, fitness=creator.FitnessMin)
+creator.create("Individual", list, fitness=creator.FitnessMin, stress=None)
 
 
 
@@ -125,8 +125,7 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 # Function that instatly produces MU individuals (population). We assign the attribute number_of_population at the main function in this problem
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-# Multiprocessing
-#toolbox.register("map", futures.map)
+
 
 
 #=========================== Initialize GA Operators ============================
@@ -166,6 +165,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         pop = ckp["population"]
         pop_fit = ckp["pop_fit"]
         pop_sol = ckp["pop_sol"]
+        pop_stress = ckp["pop_stress"]
         iter_tot = ckp["iter_tot"]
         start_gen = ckp["generation"] + 1
         if start_gen>NGEN: gen = start_gen
@@ -189,6 +189,14 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logbook2 = tools.Logbook()
         logfile2 = open("logbook2_solutions.log","w+")
 
+        # Initialize rest
+        iter_pgen = 0       # iterations per generation
+        iter_tot = 0        # total iterations
+        start_gen = 1       # starting generation
+        pop_fit = []
+        pop_sol = []
+        pop_stress = []
+
         # Produce initial population
         # We use the registered "population" method MU times and produce the population
         pop = toolbox.population(n=MU)                                
@@ -197,39 +205,38 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
         # Maps the fitness with the invalid_ind. Initiates the obj function calculation for each invalid_ind
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]   
-        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)        
+        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
         
-        # Initialize iterations
-        iter_pgen = 0  # iterations per generation
-        iter_tot = 0   # total iterations
-        start_gen = 1  # starting generation
-        fitness_gen = []
-        solution_gen = []
-        pop_fit = []
-        pop_sol = []
-
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
+            ind.stress = problem.returnStress()
 
-        # Initialize and compile statistics about the population
+        # Write log statistics about the new population
         logbook1.header = "gen", "simRuns", "std", "min", "avg", "max"
         record = stats1.compile(pop)
         logbook1.record(gen=0, simRuns=iter_pgen, **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
+        # Write log file and store important data
+        pop_fit_gen = []
+        pop_sol_gen = []
+        pop_stress_gen = []
         logbook2.header = "gen", "fitness", "solutions"
         for ind in pop:
             logbook2.record(gen=0, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
-            fitness_gen.append(tuple(ind.fitness.values))
-            solution_gen.append(tuple(ind))
+            # Save data
+            pop_fit_gen.append(tuple(ind.fitness.values))
+            pop_sol_gen.append(tuple(ind))
+            pop_stress_gen.append(ind.stress)
             
-        # Keep fitnesses and solutions for every gen in a list
-        pop_fit.append(fitness_gen)
-        pop_sol.append(solution_gen)
+        # Keep fitnesses, solutions and stress for every gen in a list
+        pop_fit.append(pop_fit_gen)
+        pop_sol.append(pop_sol_gen)
+        pop_stress.append(pop_stress_gen)
 
     # Begin the generational process
     for gen in range(start_gen, NGEN+1):
@@ -255,44 +262,52 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
-    
+            ind.stress = problem.returnStress()
+
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
         pop = toolbox.select(pop + offspring, MU)                            
 
-        # Compile statistics about the new population
+        # Write log statistics about the new population
         record = stats1.compile(pop)
         logbook1.record(gen=gen, simRuns=iter_pgen, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
-        fitness_gen=[]
-        solution_gen=[]
+
+        # Write log file and store important data
+        pop_fit_gen=[]
+        pop_sol_gen=[]
+        pop_stress_gen=[]
         for ind in pop: 
             logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
-            fitness_gen.append(tuple(ind.fitness.values))
-            solution_gen.append(tuple(ind))
-            
-        # Keep fitnesses and solutions for every gen in a list
-        pop_fit.append(fitness_gen)
-        pop_sol.append(solution_gen)
+            # Save data
+            pop_fit_gen.append(tuple(ind.fitness.values))
+            pop_sol_gen.append(tuple(ind))
+            pop_stress_gen.append(ind.stress)
+
+        # Keep fitnesses, solutions and stress for every gen in a list
+        pop_fit.append(pop_fit_gen)
+        pop_sol.append(pop_sol_gen)
+        pop_stress.append(pop_stress_gen)
+
 
         # Generate a checkpoint file
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
-            ckp = dict(population=pop, pop_fit = pop_fit, pop_sol=pop_sol, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
+            ckp = dict(population=pop, pop_fit = pop_fit, pop_sol=pop_sol, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
     
     logfile1.close()
     logfile2.close()
 
-    return iter_tot, pop_fit, pop_sol
+    return iter_tot, pop_fit, pop_sol, pop_stress
 
 
 # Call the optimization routine
-iter_tot, pop_fit, pop_sol = main(seed, checkpoint, checkpoint_freq)
+iter_tot, pop_fit, pop_sol, pop_stress = main(seed, checkpoint, checkpoint_freq)
 
 
 #================================ Post Processing ===================================
@@ -304,7 +319,7 @@ pop_fit = numpy.array(pop_fit)
 # Find best solution
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
-
+'''
 # Make a Plot
 if NOBJ == 2:
     plot1 = ExaPlots.ObjFun2D(ref_points, pop_fit, best_idx)
@@ -312,10 +327,12 @@ elif NOBJ == 3:
     plot1 = ExaPlots.ObjFun3D(ref_points, pop_fit, best_idx)
 else:
     pass
+'''
 
+gen = NGEN
+ind = best_idx
+ExpOrSim = 1      # if 0 is Experiment stress, if 1 is corresponding Simulation stress
+file = 1
+print(numpy.array(pop_stress[gen][ind][ExpOrSim][file])) # first dimension is the generation, the second is the individual, the fourth is if we want to use experiment[0] or simulation[1] data, the forth is the experiment file used for the simulation 
 
-#print(pop_fit)
-#print(best_idx)
-#print(pop_fit[best_idx])
-#print(numpy.shape(last_pop))
-#plot2 = plot.MacroStressStrain(Simul_data_file='test_mtsdd_bcc_stress.txt', custom_dt_file='custom_dt.txt', nsteps=20)
+plot2 = ExaPlots.MacroStressStrain(Exper_data=pop_stress[gen][ind][0][file], Simul_data=pop_stress[gen][ind][1][file], custom_dt_file='custom_dt.txt', nsteps=20)
