@@ -76,7 +76,7 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 15
+NGEN = 2
 
 # GA operator related parameters
 CXPB = 1.0
@@ -88,7 +88,7 @@ seed=2
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = None #"checkpoint_files/checkpoint_gen_1.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_15.pkl"
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -157,20 +157,23 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     if checkpoint:
         with open(checkpoint,"rb+") as ckp_file:
             ckp = pickle.load(ckp_file)
+        
+        try:
+            # Retrieve random state
+            random.setstate(ckp["rndstate"]) 
 
-        # Retrieve random state
-        random.setstate(ckp["rndstate"]) 
-
-        # Retrieve the state of the last checkpoint
-        pop = ckp["population"]
-        pop_fit = ckp["pop_fit"]
-        pop_sol = ckp["pop_sol"]
-        pop_stress = ckp["pop_stress"]
-        iter_tot = ckp["iter_tot"]
-        start_gen = ckp["generation"] + 1
-        if start_gen>NGEN: gen = start_gen
-        logbook1 = ckp["logbook1"]
-        logbook2 = ckp["logbook2"]
+            # Retrieve the state of the last checkpoint
+            pop = ckp["population"]
+            pop_fit = ckp["pop_fit"]
+            pop_sol = ckp["pop_sol"]
+            pop_stress = ckp["pop_stress"]
+            iter_tot = ckp["iter_tot"]
+            start_gen = ckp["generation"] + 1
+            if start_gen>NGEN: gen = start_gen
+            logbook1 = ckp["logbook1"]
+            logbook2 = ckp["logbook2"]
+        except:
+            print("\nERROR: Wrong Checkpoint file")
 
         # Open log files and erase their contents
         logfile1 = open("logbook1_stats.log","w+")
@@ -329,10 +332,10 @@ else:
     pass
 '''
 
-gen = NGEN
+gen = 15
 ind = best_idx
-ExpOrSim = 1      # if 0 is Experiment stress, if 1 is corresponding Simulation stress
+ExpOrSim = 1      # 0 is Experiment stress, 1 is corresponding Simulation stress
 file = 1
-print(numpy.array(pop_stress[gen][ind][ExpOrSim][file])) # first dimension is the generation, the second is the individual, the fourth is if we want to use experiment[0] or simulation[1] data, the forth is the experiment file used for the simulation 
+print(numpy.array(pop_stress[gen][ind][ExpOrSim][file])) # first dimension is the selected generation, the second is the selected individual, the fourth is if we want to use experiment[0] or simulation[1] data, the forth is the selected experiment file used for the simulation 
 
 plot2 = ExaPlots.MacroStressStrain(Exper_data=pop_stress[gen][ind][0][file], Simul_data=pop_stress[gen][ind][1][file], custom_dt_file='custom_dt.txt', nsteps=20)
