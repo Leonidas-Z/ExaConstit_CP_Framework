@@ -5,7 +5,6 @@ import numpy as np
 def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
     # If 1 obj function then x_dep should not be used
     # Whether or not you're using voce models
-    voce = False
     # File location
     floc = ''
     # File name
