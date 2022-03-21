@@ -107,9 +107,21 @@ class ExaPlots:
 
 
 
-    def MacroStressStrain(Simul_data_file, custom_dt_file, nsteps):
-
+    def MacroStressStrain(Exper_data, Simul_data, epsdot, custom_dt_file=None, nsteps=None):
         # How to plot the macroscopic stress strain data (Robert Carson)
+        
+        # Data
+        S_sim = np.array(Simul_data)
+        S_exp = np.array(Exper_data)
+       
+        # only here to have something that'll plot
+        if nsteps == None:
+            nsteps = len(S_exp)
+        if custom_dt_file == None:
+            time = np.ones(nsteps)
+        else:
+            time = np.loadtxt(custom_dt_file)
+
 
         font = {'size'   : 14}
         rc('font', **font)
@@ -121,30 +133,20 @@ class ExaPlots:
 
         fig, ax = plt.subplots(1)
 
-        # uncomment the below when the fileLoc is valid
-        data = np.loadtxt(Simul_data_file, comments='%')
-       
-        # only here to have something that'll plot
-        epsdot = 1e-3
-
-        sig = data[:,1]
-        # uncomment the below when the fileLoc is valid
-        time = np.loadtxt(custom_dt_file)
-
-        # only here to have something that'll plot
-        time = np.ones(nsteps)
+        # initiate strain
         eps = np.zeros(nsteps)
 
-        for i in range(0, nsteps):
+        for i in range(1, nsteps):
             dtime = time[i]
-            if sig[i] - sig[i - 1] >= 0:
+            if S_sim[i] - S_sim[i - 1] >= 0:
                 eps[i] = eps[i - 1] + epsdot * dtime
             else:
                 eps[i] = eps[i - 1] - epsdot * dtime
-
-        ax.plot(eps, sig, 'r')
-        ax.grid()
-
+        
+        ax.plot(eps, S_exp, color='r', label='S_exp') #, linestyle='--')
+        ax.plot(eps, S_sim, color='b', label ='S_sim')
+        ax.grid() 
+        ax.legend()
         # change this to fit your data                 
         # ax.axis([0, 0.01, 0, 0.3])
 

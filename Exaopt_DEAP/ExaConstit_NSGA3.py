@@ -7,7 +7,8 @@ import pickle
 from ExaConstit_problems import ExaProb
 from PlotMaker import ExaPlots
 from SolutionPicker import BestSol
-#from scoop import futures
+
+
 
 ##### ExaConstit Optimization Routine (LZ) #####
 
@@ -63,43 +64,46 @@ problem = ExaProb(n_obj=NOBJ,
                   Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'])
 
 
-# Parameters related with Reference Points 
-P = 20
+# Parameters related with Reference Points
+P = 30
+
 # Scaling (None or 1 is the same)
-scaling = None 
+scaling = None
 
 # Number of Reference Points (NSGAIII paper)
-H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))  
+H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 # Population number (NSGAIII paper)
 MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 2
+NGEN = 1
 
 # GA operator related parameters
 CXPB = 1.0
 MUTPB = 1.0
 
 # Specify seed (if use checkpoint it doesn't matter)
-seed=2
+seed=15
 
 # Specify checkpoint frequency (generations per checkpoint)
-checkpoint_freq = 1 
+checkpoint_freq = 1
+
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = "checkpoint_files/checkpoint_gen_15.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_9.pkl"
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
+print("Number of parameters = {}".format(NDIM))
+print("Number of generations = {}".format(NGEN))
 print("Number of reference points = {}".format(H))
 print("Population size = {}".format(MU))
-print("Number of generations = {}".format(NGEN))
-print("Number of parameters = {}\n".format(NDIM))
+print("Expected Total Simulation Runs = {}\n".format(MU*NOBJ*NGEN))
 
 
 
-#====================== Initialize Optimization Strategy ==========================
+#====================== Initialize Optimization Strategy ======================
 # Create minimization problem (multiply -1 weights)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 # Create the Individual class that it has also the fitness (obj function results) as a list
@@ -322,7 +326,7 @@ pop_fit = numpy.array(pop_fit)
 # Find best solution
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
-'''
+
 # Make a Plot
 if NOBJ == 2:
     plot1 = ExaPlots.ObjFun2D(ref_points, pop_fit, best_idx)
@@ -330,12 +334,25 @@ elif NOBJ == 3:
     plot1 = ExaPlots.ObjFun3D(ref_points, pop_fit, best_idx)
 else:
     pass
+
+
+gen = 1
+ind = best_idx
+file=0
+strain_rate=1e-3
+plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
+file=1
+plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
+ 
+
+'''
+gen = 1
+ind = best_idx
+ExpOrSim = 1    # 0 is Experiment data, 1 is corresponding Simulation data
+file = 0 
+# first dimension is the selected generation, the second is the selected individual, 
+# the third is if we want to use experiment[0] or simulation[1] data, 
+# the forth is the selected experiment file used for the simulation 
+print(numpy.array(pop_stress[gen][ind][ExpOrSim][file]))
 '''
 
-gen = 15
-ind = best_idx
-ExpOrSim = 1      # 0 is Experiment stress, 1 is corresponding Simulation stress
-file = 1
-print(numpy.array(pop_stress[gen][ind][ExpOrSim][file])) # first dimension is the selected generation, the second is the selected individual, the fourth is if we want to use experiment[0] or simulation[1] data, the forth is the selected experiment file used for the simulation 
-
-plot2 = ExaPlots.MacroStressStrain(Exper_data=pop_stress[gen][ind][0][file], Simul_data=pop_stress[gen][ind][1][file], custom_dt_file='custom_dt.txt', nsteps=20)
