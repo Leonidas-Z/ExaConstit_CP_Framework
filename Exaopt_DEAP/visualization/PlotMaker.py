@@ -109,7 +109,7 @@ class ExaPlots:
 
     def MacroStressStrain(Exper_data, Simul_data, epsdot, custom_dt_file=None, nsteps=None):
         # How to plot the macroscopic stress strain data (Robert Carson)
-        
+
         # Data
         S_sim = np.array(Simul_data)
         S_exp = np.array(Exper_data)
