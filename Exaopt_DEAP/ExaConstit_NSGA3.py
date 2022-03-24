@@ -1,13 +1,12 @@
 from deap import creator, base, tools, algorithms
+from matplotlib.pyplot import grid
 import numpy
 import pandas
 import random
 from math import factorial
 import pickle
 from ExaConstit_problems import ExaProb
-from PlotMaker import ExaPlots
 from SolutionPicker import BestSol
-
 
 
 ##### ExaConstit Optimization Routine (LZ) #####
@@ -31,12 +30,11 @@ from SolutionPicker import BestSol
 NOBJ = 2
 
 # Specify independent (athermal parameters)
-IND_LOW = [1500, 1.0e-4, 1e-2]
-IND_UP  = [2500, 10e-4 , 10.0e-2]
+IND_LOW = [1500, 1e-5, 1e-3]
+IND_UP  = [2500, 1e-3, 1e-1]
 # Specify dependent (thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
-DEP_LOW = [1e-3,    1e-4   , 1e-5]
-DEP_UP = [10.0e-3, 10.0e-4, 10.0e-5]
-
+DEP_LOW = [1e-4, 1e-5, 1e-6]
+DEP_UP =  [1e-2, 1e-3, 1e-4]
 
 # Final Bounds
 BOUND_LOW = IND_LOW
@@ -52,20 +50,8 @@ else:
 # Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
 NDIM = len(BOUND_LOW)
 
-
-# Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
-problem = ExaProb(n_obj=NOBJ,
-                  n_dep=n_dep,
-                  n_steps=[20,20],
-                  ncpus = 20,
-                  #loc_mechanics_bin ="",
-                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                  Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
-                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'])
-
-
 # Parameters related with Reference Points
-P = 30
+P = 20
 
 # Scaling (None or 1 is the same)
 scaling = None
@@ -78,7 +64,7 @@ ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
 MU = int(H + (4 - H % 4))
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 1
+NGEN = 50
 
 # GA operator related parameters
 CXPB = 1.0
@@ -91,7 +77,18 @@ seed=15
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint = "checkpoint_files/checkpoint_gen_9.pkl"
+checkpoint="checkpoint_files/checkpoint_gen_50.pkl"
+
+# Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
+problem = ExaProb(n_obj=NOBJ,
+                  n_dep=n_dep,
+                  n_steps=[20,20],
+                  ncpus = 20,
+                  #loc_mechanics_bin ="",
+                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
+                  Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
+                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'])
+
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -99,6 +96,7 @@ print("Number of parameters = {}".format(NDIM))
 print("Number of generations = {}".format(NGEN))
 print("Number of reference points = {}".format(H))
 print("Population size = {}".format(MU))
+print("Expected Total Iterations = {}".format(MU*NGEN))
 print("Expected Total Simulation Runs = {}\n".format(MU*NOBJ*NGEN))
 
 
@@ -169,7 +167,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Retrieve the state of the last checkpoint
             pop = ckp["population"]
             pop_fit = ckp["pop_fit"]
-            pop_sol = ckp["pop_sol"]
+            pop_param = ckp["pop_param"]
             pop_stress = ckp["pop_stress"]
             iter_tot = ckp["iter_tot"]
             start_gen = ckp["generation"] + 1
@@ -201,7 +199,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         iter_tot = 0        # total iterations
         start_gen = 1       # starting generation
         pop_fit = []
-        pop_sol = []
+        pop_param = []
         pop_stress = []
 
         # Produce initial population
@@ -222,27 +220,27 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ind.stress = problem.returnStress()
 
         # Write log statistics about the new population
-        logbook1.header = "gen", "simRuns", "std", "min", "avg", "max"
+        logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, simRuns=iter_pgen, **record)
+        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
         # Write log file and store important data
         pop_fit_gen = []
-        pop_sol_gen = []
+        pop_par_gen = []
         pop_stress_gen = []
         logbook2.header = "gen", "fitness", "solutions"
         for ind in pop:
             logbook2.record(gen=0, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
             # Save data
-            pop_fit_gen.append(tuple(ind.fitness.values))
-            pop_sol_gen.append(tuple(ind))
+            pop_fit_gen.append(ind.fitness.values)
+            pop_par_gen.append(tuple(ind))
             pop_stress_gen.append(ind.stress)
             
         # Keep fitnesses, solutions and stress for every gen in a list
         pop_fit.append(pop_fit_gen)
-        pop_sol.append(pop_sol_gen)
+        pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
 
     # Begin the generational process
@@ -278,43 +276,42 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, simRuns=iter_pgen, **record)
+        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
 
         # Write log file and store important data
         pop_fit_gen=[]
-        pop_sol_gen=[]
+        pop_par_gen=[]
         pop_stress_gen=[]
         for ind in pop: 
             logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
             # Save data
-            pop_fit_gen.append(tuple(ind.fitness.values))
-            pop_sol_gen.append(tuple(ind))
+            pop_fit_gen.append(ind.fitness.values)
+            pop_par_gen.append(tuple(ind))
             pop_stress_gen.append(ind.stress)
 
         # Keep fitnesses, solutions and stress for every gen in a list
         pop_fit.append(pop_fit_gen)
-        pop_sol.append(pop_sol_gen)
+        pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
-
 
         # Generate a checkpoint file
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
-            ckp = dict(population=pop, pop_fit = pop_fit, pop_sol=pop_sol, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
+            ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
     
     logfile1.close()
     logfile2.close()
 
-    return iter_tot, pop_fit, pop_sol, pop_stress
+    return iter_tot, pop_fit, pop_param, pop_stress
 
 
 # Call the optimization routine
-iter_tot, pop_fit, pop_sol, pop_stress = main(seed, checkpoint, checkpoint_freq)
+iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
 
 
 #================================ Post Processing ===================================
@@ -327,32 +324,47 @@ pop_fit = numpy.array(pop_fit)
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
 
-# Make a Plot
-if NOBJ == 2:
-    plot1 = ExaPlots.ObjFun2D(ref_points, pop_fit, best_idx)
-elif NOBJ == 3:
-    plot1 = ExaPlots.ObjFun3D(ref_points, pop_fit, best_idx)
-else:
-    pass
-
-
-gen = 1
+# Visualize the results
+from visualization.PlotMaker import ExaPlots
+gen = NGEN
 ind = best_idx
-file=0
 strain_rate=1e-3
+file=0
+# Note that: pop_stress[gen][ind][expSim][file]
+# first dimension is the selected generation, 
+# second is the selected individual, 
+# third is if we want to use experiment [0] or simulation [1] data, 
+# forth is the selected experiment file used for the simulation 
 plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
 file=1
 plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
- 
 
-'''
-gen = 1
-ind = best_idx
-ExpOrSim = 1    # 0 is Experiment data, 1 is corresponding Simulation data
-file = 0 
-# first dimension is the selected generation, the second is the selected individual, 
-# the third is if we want to use experiment[0] or simulation[1] data, 
-# the forth is the selected experiment file used for the simulation 
-print(numpy.array(pop_stress[gen][ind][ExpOrSim][file]))
-'''
+#pop_fit = numpy.random.random((30, 5))
+from visualization.scatter import Scatter
+plot = Scatter(tight_layout=False)
+plot.add(pop_fit, s=20)
+plot.add(pop_fit[best_idx], s=30, color="red")
+plot.add(ref_points, color="blue")
+plot.show()
+plot = Scatter()
+plot.add(pop_fit, s=20)
+plot.add(pop_fit[best_idx], s=30, color="red")
+plot.show()
 
+from visualization.pcp import PCP
+plot = PCP(tight_layout=True)
+plot.set_axis_style(color="grey", alpha=0.5)
+plot.add(pop_fit, color="grey", alpha=0.3)
+plot.add(pop_fit[best_idx], linewidth=2, color="red")
+plot.show()
+
+from visualization.petal import Petal
+plot = Petal(bounds=[0, 0.02], tight_layout=True)
+plot.add(pop_fit[best_idx])
+plot.show()
+#Put out of comments if we want to see all the individual fitnesses and not only the best
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,MU+1)], tight_layout=True)
+k = int(MU/2)
+plot.add(pop_fit[:k])
+plot.add(pop_fit[k:])
+plot.show()
