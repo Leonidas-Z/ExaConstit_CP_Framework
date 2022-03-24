@@ -88,13 +88,13 @@ class ExaProb:
         # Separate parameters into dependent (thermal) and independent (athermal) groups
         # x_group[0] will be the independent group. The rest will be the dependent groups for each objective
         if self.n_dep != None:
-            n_ind = len(x) - self.n_obj*self.n_dep
-            x_dep = x[n_ind:]
-            x_group = [x[0:n_ind]]
+            self.n_ind = len(x) - self.n_obj*self.n_dep
+            x_dep = x[self.n_ind:]
+            x_group = [x[0:self.n_ind]]
             x_group.extend([x_dep[k:k+self.n_dep] for k in range(0, len(x_dep), self.n_dep)])
         else:
-            n_ind = len(x)
-            x_group = [x[0:n_ind]]
+            self.n_ind = len(x)
+            x_group = [x[0:self.n_ind]]
 
         # Count iterations and save solutions
         self.iter += 1
