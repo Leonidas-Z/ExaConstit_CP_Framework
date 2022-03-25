@@ -1,7 +1,6 @@
 from deap import creator, base, tools, algorithms
 from matplotlib.pyplot import grid
 import numpy
-import pandas
 import random
 from math import factorial
 import pickle
@@ -362,19 +361,19 @@ plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
 
 from visualization.pcp import PCP
-plot = PCP(tight_layout=True)
+plot = PCP(tight_layout=False)
 plot.set_axis_style(color="grey", alpha=0.5)
 plot.add(pop_fit, color="grey", alpha=0.3)
 plot.add(pop_fit[best_idx], linewidth=2, color="red")
 plot.show()
 
 from visualization.petal import Petal
-plot = Petal(bounds=[0, 0.02], tight_layout=True)
+plot = Petal(bounds=[0, 0.02], tight_layout=False)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,NPOP+1)], tight_layout=True)
-k = int(NPOP/2)
-plot.add(pop_fit[:k])
-plot.add(pop_fit[k:])
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,NPOP+1)], tight_layout=False)
+for k in range(1,NPOP+1):
+    if k%4==0:
+        plot.add(pop_fit[k-4:k])
 plot.show()

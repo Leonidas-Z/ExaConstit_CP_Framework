@@ -174,7 +174,7 @@ class ExaProb:
             S_exp = np.array(self.S_exp[k])
             S_sim = np.array(self.S_sim[k])
 
-            f[k] = np.sqrt(sum((1 - abs(S_sim/S_exp))**2))
+            f[k] = np.sqrt(sum((S_sim-S_exp)**2)/sum(S_exp**2))
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))
                
         self.logger.info('')
