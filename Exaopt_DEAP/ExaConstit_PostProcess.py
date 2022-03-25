@@ -5,7 +5,7 @@ from SolutionPicker import BestSol
 NOBJ=2
 
 # Read file
-output="checkpoint_files/out_gen_50.pkl"
+output="checkpoint_files/output_gen_11.pkl"
 
 
 # Retrieve the state of the specified checkpoint
@@ -17,6 +17,8 @@ pop_param = ckp["pop_param"]
 pop_stress = ckp["pop_stress"]
 iter_tot = ckp["iter_tot"]
 last_gen = ckp["generation"]
+#NPOP = ckp["NPOP"]
+NPOP = 8
 
 
 # ================================ Post Processing ===================================
@@ -60,8 +62,8 @@ plot = Petal(bounds=[0, 0.02], tight_layout=True)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,N+1)], tight_layout=True)
-k = int(N/2)
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,NPOP+1)], tight_layout=True)
+k = int(NPOP/2)
 plot.add(pop_fit[:k])
 plot.add(pop_fit[k:])
 plot.show()
