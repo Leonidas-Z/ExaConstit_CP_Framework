@@ -5,7 +5,7 @@ import pandas
 import random
 from math import factorial
 import pickle
-from ExaConstit_problems import ExaProb
+from ExaConstit_Problems import ExaProb
 from SolutionPicker import BestSol
 
 
@@ -69,7 +69,7 @@ P = sum(p)
 H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
 
 # Population number (NSGAIII paper)
-N = int(H + (4 - H % 4))
+NPOP = int(H + (4 - H % 4))
 
 # GA operator related parameters
 CXPB = 1.0
@@ -94,7 +94,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None#"checkpoint_files/checkpoint_gen_30.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_30.pkl"
 
 
 
@@ -103,9 +103,9 @@ print("\nNumber of objective functions = {}".format(NOBJ))
 print("Number of parameters = {}".format(NDIM))
 print("Number of generations = {}".format(NGEN))
 print("Number of reference points = {}".format(H))
-print("Population size = {}".format(N))
-print("Expected Total Iterations = {}".format(N*NGEN))
-print("Expected Total Simulation Runs = {}\n".format(N*NOBJ*NGEN))
+print("Population size = {}".format(NPOP))
+print("Expected Total Iterations = {}".format(NPOP*NGEN))
+print("Expected Total Simulation Runs = {}\n".format(NPOP*NOBJ*NGEN))
 
 
 
@@ -212,7 +212,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Produce initial population
         # We use the registered "population" method MU times and produce the population
-        pop = toolbox.population(n=N)                                
+        pop = toolbox.population(n=NPOP)                                
         
         # Returns the individuals with an invalid fitness
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
@@ -280,7 +280,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
-        pop = toolbox.select(pop + offspring, N)                            
+        pop = toolbox.select(pop + offspring, NPOP)                            
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
@@ -305,7 +305,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
 
-        # Generate a checkpoint file
+        # Generate a checkpoint and output files (the output file will be independent of DEAP module)
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
             ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
@@ -373,8 +373,8 @@ plot = Petal(bounds=[0, 0.02], tight_layout=True)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,N+1)], tight_layout=True)
-k = int(N/2)
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,NPOP+1)], tight_layout=True)
+k = int(NPOP/2)
 plot.add(pop_fit[:k])
 plot.add(pop_fit[k:])
 plot.show()
