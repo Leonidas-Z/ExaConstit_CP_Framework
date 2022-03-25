@@ -20,9 +20,9 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
     # Elastic Constants:
     # (c11, c12, c44 for Cubic crystals) or
     # (c11, c12, c13, c33, and c44) for Hexagonal crystals
-    c11 = 168.4 # GPa
-    c12 = 121.4 # GPa
-    c44 = 75.2 # GPa
+    c11 = x_ind[0] #168.4 # GPa
+    c12 = x_ind[1] #121.4 # GPa
+    c44 = x_ind[2] #75.2 # GPa
     elastic_const = [c11, c12, c44]
     params.extend(elastic_const)
     #Calculation of an average shear modulus value for Cubic materials
@@ -85,9 +85,9 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         # append it to to the hard_params or just loop through
         # and append the same value to hard_params for the number
         # of slip systems.
-        c1 = x_ind[0] #1.944106926e3
+        c1 = x_ind[3] #1.944106926e3
         hard_params.append(c1)
-        tau_pb = x_ind[1] #4.0e-4
+        tau_pb = x_ind[4] #4.0e-4
         hard_params.append(tau_pb)
         p = 1.0
         hard_params.append(p)
@@ -97,7 +97,7 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         hard_params.append(ref_gdot_therm)
         ref_gdot_drag = 1.0
         hard_params.append(ref_gdot_drag)
-        ref_drag_stress = x_ind[2] #3.0e-2
+        ref_drag_stress = x_ind[5] #3.0e-2
         hard_params.append(ref_drag_stress)
         # This param is defined for each slip system for HCP so
         # you need to either bulild it up as one big array and

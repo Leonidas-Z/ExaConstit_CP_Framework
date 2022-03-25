@@ -30,8 +30,8 @@ from SolutionPicker import BestSol
 NOBJ = 2
 
 # Specify independent (athermal parameters)
-IND_LOW = [1500, 1e-5, 1e-3]
-IND_UP  = [2500, 1e-3, 1e-1]
+IND_LOW = [150, 100,  50,  1500, 1e-5, 1e-3]
+IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1]
 # Specify dependent (thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
 DEP_LOW = [1e-4, 1e-5, 1e-6]
 DEP_UP =  [1e-2, 1e-3, 1e-4]
@@ -50,44 +50,52 @@ else:
 # Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
 NDIM = len(BOUND_LOW)
 
-# Parameters related with Reference Points
-P = 20
-
-# Scaling (None or 1 is the same)
-scaling = None
-
-# Number of Reference Points (NSGAIII paper)
-H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
-# Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-ref_points = tools.uniform_reference_points(NOBJ, P, scaling)
-# Population number (NSGAIII paper)
-MU = int(H + (4 - H % 4))
-
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 50
+NGEN = 100
+
+# Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
+scaling=[1, 0.5]
+p=[50, 0]
+
+ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
+if p[1]!=0 and scaling[1]!=0:
+    ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
+    ref_points=numpy.concatenate((ref1, ref2), axis=0)
+else: 
+    ref_points=ref1
+    
+# Number of Reference Points (NSGAIII paper)
+P = sum(p)
+H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
+
+# Population number (NSGAIII paper)
+N = int(H + (4 - H % 4))
 
 # GA operator related parameters
 CXPB = 1.0
 MUTPB = 1.0
 
-# Specify seed (if use checkpoint it doesn't matter)
-seed=15
-
-# Specify checkpoint frequency (generations per checkpoint)
-checkpoint_freq = 1
-
-# Specify checkpoint file or set None if you want to start from the beginning
-checkpoint="checkpoint_files/checkpoint_gen_50.pkl"
-
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
+                  mult_GA=True,
                   n_dep=n_dep,
                   n_steps=[20,20],
                   ncpus = 20,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
-                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'])
+                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'],
+                  )
+
+# Specify seed (if checkpoint!=None it doesn't matter)
+seed=None
+
+# Specify checkpoint frequency (generations per checkpoint)
+checkpoint_freq = 1
+
+# Specify checkpoint file or set None if you want to start from the beginning
+checkpoint= None#"checkpoint_files/checkpoint_gen_30.pkl"
+
 
 
 
@@ -95,9 +103,9 @@ print("\nNumber of objective functions = {}".format(NOBJ))
 print("Number of parameters = {}".format(NDIM))
 print("Number of generations = {}".format(NGEN))
 print("Number of reference points = {}".format(H))
-print("Population size = {}".format(MU))
-print("Expected Total Iterations = {}".format(MU*NGEN))
-print("Expected Total Simulation Runs = {}\n".format(MU*NOBJ*NGEN))
+print("Population size = {}".format(N))
+print("Expected Total Iterations = {}".format(N*NGEN))
+print("Expected Total Simulation Runs = {}\n".format(N*NOBJ*NGEN))
 
 
 
@@ -204,7 +212,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Produce initial population
         # We use the registered "population" method MU times and produce the population
-        pop = toolbox.population(n=MU)                                
+        pop = toolbox.population(n=N)                                
         
         # Returns the individuals with an invalid fitness
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
@@ -272,7 +280,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
-        pop = toolbox.select(pop + offspring, MU)                            
+        pop = toolbox.select(pop + offspring, N)                            
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
@@ -303,6 +311,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
+            # Fill the dictionary using the dict(key=value[, ...]) constructor
+            out = dict(pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen)
+            with open("checkpoint_files/output_gen_{}.pkl".format(gen), "wb+") as out_file:
+                pickle.dump(out, out_file)
     
     logfile1.close()
     logfile2.close()
@@ -316,7 +328,8 @@ iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_fre
 
 #================================ Post Processing ===================================
 # Choose which generation you want to show in plots
-pop_fit = pop_fit[-1]  # here we chose the last gen (best)
+gen = -1 # here we chose the last gen (best)
+pop_fit = pop_fit[gen]  
 pop_fit = numpy.array(pop_fit) 
 
 
@@ -324,22 +337,19 @@ pop_fit = numpy.array(pop_fit)
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
 
-# Visualize the results
+# Visualize the results (here we used the visualization module of pymoo extensively)
 from visualization.PlotMaker import ExaPlots
-gen = NGEN
-ind = best_idx
 strain_rate=1e-3
-file=0
 # Note that: pop_stress[gen][ind][expSim][file]
 # first dimension is the selected generation, 
 # second is the selected individual, 
 # third is if we want to use experiment [0] or simulation [1] data, 
 # forth is the selected experiment file used for the simulation 
-plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
+file=0
+plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
 file=1
-plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][ind][0][file], Simul_data = pop_stress[gen][ind][1][file], epsdot = strain_rate)
+plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
 
-#pop_fit = numpy.random.random((30, 5))
 from visualization.scatter import Scatter
 plot = Scatter(tight_layout=False)
 plot.add(pop_fit, s=20)
@@ -363,8 +373,8 @@ plot = Petal(bounds=[0, 0.02], tight_layout=True)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,MU+1)], tight_layout=True)
-k = int(MU/2)
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,N+1)], tight_layout=True)
+k = int(N/2)
 plot.add(pop_fit[:k])
 plot.add(pop_fit[k:])
 plot.show()
