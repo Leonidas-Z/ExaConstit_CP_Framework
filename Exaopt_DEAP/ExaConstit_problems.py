@@ -11,13 +11,15 @@ class ExaProb:
     # This is the constructor of the objective function evaluation
     # All the assigned files must have same length with the n_obj
     # (for each obj function we need a different Experiment data set etc.)
-    # for loc_file and loc_mechanics, give absolutet paths
+    # for loc_file and loc_mechanics, give absolute paths
+    # if mult_GA=False, (run problem with simple GA), then n_obj argument doesn't do anything
 
     def __init__(self,
-                 n_obj,
-                 n_steps,
+                 n_obj=2,
+                 mult_GA=False,
+                 n_steps=[20,20],
                  n_dep=None,
-                 ncpus=4,
+                 ncpus=2,
                  loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
@@ -37,6 +39,7 @@ class ExaProb:
         self.Exper_input_files = Exper_input_files
         self.iter = 0
         self.runs = 0
+        self.mult_GA = mult_GA
 
         # Make log file to track the runs. This file will be created after the code starts to run.
         logging.basicConfig(filename='logbook3_ExaProb.log', level=logging.INFO,format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
@@ -44,14 +47,22 @@ class ExaProb:
 
         # Check if we have as many files as the objective functions
         for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files"]):
-            if len(data) != n_obj:
+            if len(data) != n_obj and mult_GA==True:
                 self.logger.error('ERROR: The length of "{}" is not equal to NOBJ={}'.format(name, n_obj))
                 sys.exit('\nERROR: The length of "{}" is not equal to NOBJ={}'.format(name, n_obj))
+            if mult_GA==False:
+                self.logger.error('ERROR: The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)))
+                sys.exit('\nERROR: The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)))
+        
+        # if multi-objective scheme, we should have more that 2 objectives
+        if n_obj<2 and mult_GA==True:
+            self.logger.error('ERROR: NOBJ={} when mult_obj=True'.format(n_obj))
+            sys.exit('\nERROR: NOBJ={} when mult_obj=True'.format(n_obj))
 
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
         S_exp = []
-        for k in range(n_obj):
+        for k in range(len(Exper_input_files)):
             try:
                 S_exp_data = np.loadtxt(
                     Exper_input_files[k], dtype='float', ndmin=2)
@@ -70,7 +81,6 @@ class ExaProb:
         self.S_exp = S_exp
 
     def evaluate(self, x):
-
         # Iteration and logger info down below modifies class
         # In a parallel environment if we want the same behavior as down
         # below, we will need some sort of lock associated with things.
@@ -156,8 +166,8 @@ class ExaProb:
             if status == 0 and no_sim_data == no_exp_data:
                 self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
             else:
-                self.logger.info('\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data = {l}'.format(k=k, l=no_sim_data[k]))
-                sys.exit('\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data = {l}'.format(k=k, l=no_sim_data[k]))
+                self.logger.info('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
+                sys.exit('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]. no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
@@ -167,13 +177,20 @@ class ExaProb:
             f[k] = np.sqrt(sum((1 - abs(S_sim/S_exp))**2)/len(S_exp))
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))
                
-
         self.logger.info('')
 
-        return f
+        # If use a simple GA scheme then return the summation of all the objective functions
+        # If use a multiple_objective GA scheme then return individual objective functions
+        if self.mult_GA == False:
+            F = sum(f)
+            self.logger.info('\tGlobal obj function: fit = '+str(F))
+        else:
+            F = f
+
+        return F
 
     def returnStress(self):
-        # save stresses in a parameter for the particular iteration that this function is called
+        # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
         stress.extend([self.S_exp, self.S_sim]) 
         return stress
