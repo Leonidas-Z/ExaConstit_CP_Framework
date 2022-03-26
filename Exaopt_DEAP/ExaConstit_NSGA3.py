@@ -50,11 +50,11 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 10
+NGEN = 2
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 scaling=[1, 0.5]
-p=[50, 0]
+p=[10, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
 if p[1]!=0 and scaling[1]!=0:
@@ -79,7 +79,7 @@ problem = ExaProb(n_obj=NOBJ,
                   mult_GA=True,
                   n_dep=n_dep,
                   n_steps=[20,20],
-                  ncpus = 20,
+                  ncpus = 4,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
@@ -93,7 +93,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= "checkpoint_files/checkpoint_gen_50.pkl"
+checkpoint= None#"checkpoint_files/checkpoint_gen_50.pkl"
 
 
 
