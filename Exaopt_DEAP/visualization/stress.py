@@ -4,7 +4,7 @@ from visualization.staff.docs import parse_doc_string
 from visualization.staff.plot import Plot, set_if_none
 
 
-class Scatter(Plot):
+class Stress(Plot):
 
     def __init__(self,
                  angle=(45, 45),
@@ -134,4 +134,3 @@ class Scatter(Plot):
             ax.set_zlabel(labels[2])
 
 
-parse_doc_string(Scatter.__init__)
