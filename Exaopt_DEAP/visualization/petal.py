@@ -2,8 +2,7 @@ import numpy as np
 
 
 from visualization.staff.docs import parse_doc_string
-from visualization.staff.plot import Plot
-from visualization.staff.misc import set_if_none
+from visualization.staff.plot import Plot, set_if_none
 from visualization.staff.util import get_circle_points, plot_axes_lines, \
     plot_axis_labels, plot_circle, plot_polygon, parse_bounds, normalize, equal_axis, no_ticks
 

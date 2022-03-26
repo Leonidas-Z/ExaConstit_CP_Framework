@@ -1,52 +1,40 @@
 import numpy as np
-import importlib
-import matplotlib
-from matplotlib.colors import ListedColormap
-import matplotlib.pyplot as plt
 
-from pymoo.docs import parse_doc_string
-from pymoo.core.plot import Plot
-from pymoo.util.misc import set_if_none
+from visualization.staff.docs import parse_doc_string
+from visualization.staff.plot import Plot, set_if_none
 
 
-class Scatter:
+class Scatter(Plot):
 
     def __init__(self,
                  angle=(45, 45),
-                 figsize=(8, 6),
-                 tight_layout=False,
-                 bounds=None,
-                 cmap="tab10"
-                 ):
-        
+                 **kwargs):
+        """
+
+        Scatter Plot
+
+        Parameters
+        ----------------
+
+        axis_style : {axis_style}
+        endpoint_style : dict
+            Endpoints are drawn at each extreme point of an objective. This style can be modified.
+        labels : {labels}
+
+        Other Parameters
+        ----------------
+
+        figsize : {figsize}
+        title : {title}
+        legend : {legend}
+        tight_layout : {tight_layout}
+        cmap : {cmap}
+
+        """
+
+        super().__init__(**kwargs)
         self.angle = angle
-
-        # change the font of plots to serif (looks better)
-        plt.rc('font', family='serif')
-
-        # the matplotlib classes
-        self.figsize = figsize
-
-        # the data to plot
-        self.to_plot = []
-
-        # whether to plot a legend or apply tight layout
-        self.tight_layout = tight_layout
-
-        # the colormap or the color lists to use
-        if isinstance(cmap, str):
-            self.cmap = matplotlib.cm.get_cmap(cmap)
-        else:
-            self.cmap = cmap
-        if isinstance(self.cmap, ListedColormap):
-            self.colors = self.cmap.colors
-
-        # the dimensional of the data
-        self.n_dim = None
-
-        # the boundaries for normalization
-        self.bounds = bounds
-
+        
 
     def _do(self):
 
@@ -55,28 +43,35 @@ class Scatter:
         is_3d = (self.n_dim == 3)
         more_than_3d = (self.n_dim > 3)
 
-
         # create the figure and axis objects
         if is_1d or is_2d:
-            self._init_figure()
+            self.init_figure()
         elif is_3d:
-            self._init_figure(plot_3D=True)
+            self.init_figure(plot_3D=True)
         elif more_than_3d:
-            self._init_figure(n_rows=self.n_dim, n_cols=self.n_dim)
-
+            self.init_figure(n_rows=self.n_dim, n_cols=self.n_dim)
 
         # now plot data points for each entry
-        for k, F in enumerate(self.to_plot):
+        for k, (F, kwargs) in enumerate(self.to_plot):
+
+            # copy the arguments and set the default color
+            _kwargs = kwargs.copy()
+            set_if_none(_kwargs, "color", self.colors[k % len(self.colors)])
+
+            # determine the plotting type - scatter or line
+            _type = _kwargs.get("plot_type")
+            if "plot_type" in _kwargs:
+                del _kwargs["plot_type"]
 
             if is_1d:
                 F = np.column_stack([F, np.zeros(len(F))])
                 labels = self.get_labels() + [""]
 
-                self.plot(self.ax, _type, F)
+                self.plot(self.ax, _type, F, **_kwargs)
                 self.set_labels(self.ax, labels, False)
 
             elif is_2d:
-                self.plot(self.ax, _type, F)
+                self.plot(self.ax, _type, F, **_kwargs)
                 self.set_labels(self.ax, self.get_labels(), False)
 
             elif is_3d:
@@ -110,33 +105,10 @@ class Scatter:
                             ax.text(0, 0, labels[i], ha='center', va='center', fontsize=20)
 
         return self
-    
-    
-    
-    def _get_labels(self):
-        if isinstance(self.axis_labels, list):
-            if len(self.axis_labels) != self.n_dim:
-                raise Exception("Number of axes labels not equal to the number of axes.")
-            else:
-                return self.axis_labels
-        else:
-            return [f"${self.axis_labels}_{{{i}}}$" for i in range(1, self.n_dim + 1)]
 
-
-    def _init_figure(self, n_rows=1, n_cols=1, plot_3D=False, force_axes_as_matrix=False):
-        if not plot_3D:
-            self.fig, self.ax = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=self.figsize)
-        else:
-            importlib.import_module("mpl_toolkits.mplot3d")
-            self.fig = plt.figure(figsize=self.figsize)
-            self.ax = self.fig.add_subplot(1, 1, 1, projection='3d')
-
-        # if there is more than one figure we represent it as a 2D numpy array
-        if (n_rows > 1 or n_cols > 1) or force_axes_as_matrix:
-            self.ax = np.array(self.ax).reshape(n_rows, n_cols)
 
     def plot(self, ax, _type, F, **kwargs):
-
+        # kwargs includes all the addtional arguments for the matplotlib class (color, size, etc.)
         is_3d = F.shape[1] == 3
         if _type is None:
             _type = "scatter"

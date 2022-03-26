@@ -5,23 +5,23 @@ import random
 from math import factorial
 import pickle
 from ExaConstit_Problems import ExaProb
-from SolutionPicker import BestSol
+from ExaConstit_SolPicker import BestSol
 
 
-##### ExaConstit Optimization Routine (LZ) #####
+'''
+ExaConstit Optimization Routine (LZ)
 
-# This script is using the NSGAIII algorithm from the DEAP module and intends
-# to optimize Crystal Plasticity Parameters calling the ExaConstit simulation
-# program via ExaProb class.
+This script is using the NSGAIII algorithm from the DEAP module and intends
+to optimize Crystal Plasticity Parameters calling the ExaConstit simulation
+program via ExaProb class.
 
-# The method that the objective functions are calculated can be found in 
-# the evaluation function in the ExaProb class.
+The method that the objective functions are calculated can be found in 
+the evaluation function in the ExaProb class.
 
-# For details about how DEAP module works please look at their tutorial:
-# https://deap.readthedocs.io/en/master/index.html 
-# Also please look at the associated paper for the NSGAIII
-
-
+For details about how DEAP module works please look at their tutorial:
+https://deap.readthedocs.io/en/master/index.html 
+Also please look at the associated paper for the NSGAIII
+'''
 
 #============================== Input Parameters ================================
 # Problem Parameters
@@ -50,7 +50,7 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 100
+NGEN = 10
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 scaling=[1, 0.5]
@@ -93,8 +93,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_30.pkl"
-
+checkpoint= "checkpoint_files/checkpoint_gen_50.pkl"
 
 
 

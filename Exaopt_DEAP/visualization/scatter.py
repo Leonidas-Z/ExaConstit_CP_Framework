@@ -1,8 +1,7 @@
 import numpy as np
 
 from visualization.staff.docs import parse_doc_string
-from visualization.staff.plot import Plot
-from visualization.staff.misc import set_if_none
+from visualization.staff.plot import Plot, set_if_none
 
 
 class Scatter(Plot):
@@ -35,6 +34,7 @@ class Scatter(Plot):
 
         super().__init__(**kwargs)
         self.angle = angle
+        
 
     def _do(self):
 
@@ -106,8 +106,9 @@ class Scatter(Plot):
 
         return self
 
-    def plot(self, ax, _type, F, **kwargs):
 
+    def plot(self, ax, _type, F, **kwargs):
+        # kwargs includes all the addtional arguments for the matplotlib class (color, size, etc.)
         is_3d = F.shape[1] == 3
         if _type is None:
             _type = "scatter"

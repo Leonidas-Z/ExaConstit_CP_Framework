@@ -2,7 +2,7 @@
 
 import inspect
 import re
-from visualization.staff.config import Config
+#from visualization.staff.config import Config
 
 # =========================================================================================================
 # Docstrings Dictionary
@@ -146,8 +146,8 @@ docs = {**algorithms, **visualization}
 # =========================================================================================================
 
 def parse_doc_string(source, dest=None, other={}):
-    if not Config.parse_custom_docs:
-        return
+   # if not Config.parse_custom_docs:
+   #     return
 
     if dest is None:
         dest = source
