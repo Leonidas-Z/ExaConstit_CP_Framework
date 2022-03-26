@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
 
-from pymoo.util.misc import set_if_none
 from visualization.staff.util import default_number_to_text, in_notebook
 
 
@@ -152,7 +151,7 @@ class Plot:
         return self
 
     def add(self, F, **kwargs):
-
+        # kwargs includes all the addtional arguments for the matplotlib class (color, size, etc.)
         if F is None:
             return self
         elif F.ndim == 1:
@@ -196,6 +195,17 @@ class Plot:
     def __del__(self):
         if self.fig is not None and self.close_on_destroy:
             plt.close(self.fig)
+        
+        
+def set_if_none(kwargs, str, val):
+    if str not in kwargs:
+        kwargs[str] = val
+
+
+def set_if_none_from_tuples(kwargs, *args):
+    for key, val in args:
+        if key not in kwargs:
+            kwargs[key] = val
 
 
 def get_parameter_with_options(param):

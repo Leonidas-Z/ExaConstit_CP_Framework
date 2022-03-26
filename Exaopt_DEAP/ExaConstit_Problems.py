@@ -4,15 +4,18 @@ import os.path
 import subprocess
 import logging
 import sys
-from MatGenerator import Matgen
+from ExaConstit_MatGen import Matgen
 
 
 class ExaProb:
-    # This is the constructor of the objective function evaluation
-    # All the assigned files must have same length with the n_obj
-    # (for each obj function we need a different Experiment data set etc.)
-    # for loc_file and loc_mechanics, give absolute paths
-    # if mult_GA=False, (run problem with simple GA), then n_obj argument doesn't do anything
+
+    '''
+    This is the constructor of the objective function evaluation
+    All the assigned files must have same length with the n_obj
+    (for each obj function we need a different Experiment data set etc.)
+    for loc_file and loc_mechanics, give absolute paths
+    if mult_GA=False, (run problem with simple GA), then n_obj argument doesn't do anything
+    '''
 
     def __init__(self,
                  n_obj=2,
@@ -171,8 +174,8 @@ class ExaProb:
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
-            S_exp = np.array(self.S_exp[k])
-            S_sim = np.array(self.S_sim[k])
+            S_exp = abs(np.array(self.S_exp[k]))
+            S_sim = abs(np.array(self.S_sim[k]))
 
             f[k] = np.sqrt(sum((S_sim-S_exp)**2)/sum(S_exp**2))
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))

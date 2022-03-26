@@ -1,8 +1,7 @@
 import numpy as np
 
 from visualization.staff.docs import parse_doc_string
-from visualization.staff.plot import Plot
-from visualization.staff.misc import set_if_none, set_if_none_from_tuples
+from visualization.staff.plot import Plot, set_if_none, set_if_none_from_tuples
 from visualization.staff.util import parse_bounds, normalize
 
 

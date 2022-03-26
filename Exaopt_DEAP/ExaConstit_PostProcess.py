@@ -5,13 +5,15 @@ import sys
 from sklearn.feature_extraction import grid_to_graph
 
 
-# This script is using pymoo module visualization folder to show useful plots of the data
+''' 
+This script is using pymoo module visualization folder to show useful plots of the data 
+'''
 
 
 NPOP = 52
-
+'''
 # Read file
-output="checkpoint_files/output_gen_25.pkl"
+output="checkpoint_files/output_gen_50.pkl"
 
 # Retrieve the state of the specified checkpoint
 with open(output,"rb+") as ckp_file:
@@ -34,7 +36,7 @@ pop_fit = numpy.array(pop_fit)
 
 
 # Find best solution
-from SolutionPicker import BestSol
+from ExaConstit_SolPicker import BestSol
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
 
@@ -50,13 +52,14 @@ file=0
 plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
 file=1
 plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
-
+'''
+popl=numpy.array([[1],[2],[3],[5],[3],[1]])
 from visualization.scatter import Scatter
 plot = Scatter(tight_layout=False, grid=True)
-plot.add(pop_fit, s=20)
-plot.add(pop_fit[best_idx], s=30, color="red")
+plot.add(popl, s=20)
+#plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
-
+'''
 from visualization.pcp import PCP
 plot = PCP(tight_layout=True)
 plot.set_axis_style(color="grey", alpha=0.5)
@@ -74,3 +77,11 @@ for k in range(1,NPOP+1):
     if k%4==0:
         plot.add(pop_fit[k-4:k])
 plot.show()
+
+'''
+'''
+print(pop_stress[gen][0][1][0])
+print(pop_stress[gen][0][1][1])
+print(pop_param[gen][0])
+print(pop_param[gen][1])
+'''
