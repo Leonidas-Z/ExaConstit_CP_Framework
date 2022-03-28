@@ -195,5 +195,6 @@ class ExaProb:
     def returnStress(self):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
-        stress.extend([self.S_exp, self.S_sim]) 
+        stress.append(self.S_exp) 
+        stress.append(self.S_sim)
         return stress

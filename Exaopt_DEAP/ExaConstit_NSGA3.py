@@ -50,7 +50,7 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 2
+NGEN = 1
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 scaling=[1, 0.5]
@@ -93,7 +93,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None#"checkpoint_files/checkpoint_gen_50.pkl"
+checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
 
 
 
@@ -223,7 +223,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
-            ind.stress = problem.returnStress()
+            ind.stress = problem.return_stress()
 
         # Write log statistics about the new population
         logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
@@ -273,7 +273,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
             ind.fitness.values = fit
-            ind.stress = problem.returnStress()
+            ind.stress = problem.return_stress()
 
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
@@ -343,11 +343,15 @@ strain_rate=1e-3
 # second is the selected individual, 
 # third is if we want to use experiment [0] or simulation [1] data, 
 # forth is the selected experiment file used for the simulation 
-file=0
-plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
-file=1
-plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
+#print(pop_stress[gen][best_idx][0])
+print(numpy.array(pop_stress).shape[2])
 
+for i in range(numpy.array(pop_stress).shape[3]):
+    #for j in range(numpy.array(pop_stress).shape[2]):
+    plot = ExaPlots.MacroStressStrain(pop_stress[gen][best_idx][0][i], pop_stress[gen][best_idx][1][i], epsdot = strain_rate)
+
+
+'''
 from visualization.scatter import Scatter
 plot = Scatter(tight_layout=False)
 plot.add(pop_fit, s=20)
@@ -376,3 +380,4 @@ for k in range(1,NPOP+1):
     if k%4==0:
         plot.add(pop_fit[k-4:k])
 plot.show()
+'''
