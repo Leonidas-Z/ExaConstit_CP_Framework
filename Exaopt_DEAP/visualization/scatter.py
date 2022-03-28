@@ -103,7 +103,7 @@ class Scatter(Plot):
                             ax.set_yticks([])
                             ax.scatter(0, 0, s=1, color="white")
                             ax.text(0, 0, labels[i], ha='center', va='center', fontsize=20)
-
+    
         return self
 
 
@@ -118,11 +118,23 @@ class Scatter(Plot):
                 ax.scatter(F[:, 0], F[:, 1], F[:, 2], **kwargs)
             else:
                 ax.scatter(F[:, 0], F[:, 1], **kwargs)
+                # default options
+                ax.axis('tight')  
+                ax.set_xlim(left=0) 
+                ax.set_ylim(bottom=0) 
+                ax.grid(linestyle = '--', linewidth = 0.5)
+                           
         else:
             if is_3d:
                 ax.plot_trisurf(F[:, 0], F[:, 1], F[:, 2], **kwargs)
             else:
                 ax.plot(F[:, 0], F[:, 1], **kwargs)
+                # default options
+                ax.axis('tight')
+                ax.set_xlim(left=0) 
+                ax.set_ylim(bottom=0) 
+                ax.grid(linestyle = '--', linewidth = 0.5) 
+
 
     def set_labels(self, ax, labels, is_3d):
 

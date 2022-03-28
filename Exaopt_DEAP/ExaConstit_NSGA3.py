@@ -1,9 +1,11 @@
 from deap import creator, base, tools, algorithms
-from matplotlib.pyplot import grid
+from matplotlib.pyplot import grid, tight_layout
 import numpy
 import random
 from math import factorial
 import pickle
+
+from sympy import true
 from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
 
@@ -50,11 +52,11 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 1
+NGEN = 15
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 scaling=[1, 0.5]
-p=[10, 0]
+p=[20, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
 if p[1]!=0 and scaling[1]!=0:
@@ -93,7 +95,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
+checkpoint= None#"checkpoint_files/checkpoint_gen_2.pkl"
 
 
 
@@ -334,24 +336,20 @@ pop_fit = numpy.array(pop_fit)
 # Find best solution
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
-
 # Visualize the results (here we used the visualization module of pymoo extensively)
-from visualization.PlotMaker import ExaPlots
-strain_rate=1e-3
+
+from visualization.ExaPlotLibrary import ExaPlots
 # Note that: pop_stress[gen][ind][expSim][file]
 # first dimension is the selected generation, 
 # second is the selected individual, 
 # third is if we want to use experiment [0] or simulation [1] data, 
 # forth is the selected experiment file used for the simulation 
-#print(pop_stress[gen][best_idx][0])
-print(numpy.array(pop_stress).shape[2])
+strain_rate=1e-3
+for k in range(numpy.array(pop_stress).shape[3]):
+    S_exp = pop_stress[gen][best_idx][0][k]
+    S_sim = pop_stress[gen][best_idx][1][k]
+    plot = ExaPlots.StressStrain(S_exp, S_sim, epsdot = strain_rate)
 
-for i in range(numpy.array(pop_stress).shape[3]):
-    #for j in range(numpy.array(pop_stress).shape[2]):
-    plot = ExaPlots.MacroStressStrain(pop_stress[gen][best_idx][0][i], pop_stress[gen][best_idx][1][i], epsdot = strain_rate)
-
-
-'''
 from visualization.scatter import Scatter
 plot = Scatter(tight_layout=False)
 plot.add(pop_fit, s=20)
@@ -375,9 +373,22 @@ plot = Petal(bounds=[0, 0.02], tight_layout=False)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(1,NPOP+1)], tight_layout=False)
+plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
 for k in range(1,NPOP+1):
     if k%4==0:
         plot.add(pop_fit[k-4:k])
+plot.show()
+
+
+'''
+from visualization.stress import Stress
+strain_rate=1e-3
+plot = Stress(tight_layout=False, epsdot=1e-3)
+S_exp = pop_stress[gen][best_idx][0]
+S_sim = pop_stress[gen][best_idx][1]
+plot.add(S_exp, plot_type="line")
+plot.add(S_sim, plot_type="line")
+
+#plot.add(pop_stress[gen][best_idx][1][0], plot_type="line")
 plot.show()
 '''

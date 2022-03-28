@@ -64,24 +64,24 @@ class ExaProb:
 
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
-        S_exp = []
+        self.S_exp = []
         for k in range(len(Exper_input_files)):
             try:
-                S_exp_data = np.loadtxt(
-                    Exper_input_files[k], dtype='float', ndmin=2)
+                S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float', ndmin=2)
             except:
                 self.logger.error("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
                 sys.exit("ERROR: Exper_input_files[{k}] was not found!".format(k=k))
 
             # Assuming that each experment data file has only a stress column
-            S_exp_stress = S_exp_data[:, 0]
-            S_exp.append(tuple(S_exp_stress))
+            # S_exp will be a list that contains a numpy array corresponding to each file
+            S_exp = S_exp_data[:, 0]
+            self.S_exp.append(S_exp)
 
-            if n_steps[k] != len(S_exp_stress):
+            if n_steps[k] != len(S_exp):
                 self.logger.error("ERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
                 sys.exit("\nERROR: The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
 
-        self.S_exp = S_exp
+
 
     def evaluate(self, x):
         # Iteration and logger info down below modifies class
@@ -153,18 +153,16 @@ class ExaProb:
             if os.path.exists(self.Sim_output_files[k]) and os.stat(self.Sim_output_files[k]).st_size != 0:
                 S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
                 # Macroscopic stress in the direction of load: 3rd column (z axis)
-                S_sim = S_sim_data[:, 2]
+                _S_sim = S_sim_data[:, 2]
                 # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
-                S_sim = np.unique(S_sim)
-                # save S_sim in a parameter for each iteration
-                self.S_sim.append(tuple(S_sim))
+                S_sim = np.unique(_S_sim)
             else:
                 self.logger.error('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter, k))
                 sys.exit('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter, k))
 
             # Need more thought!!!!!!!!
             # Check if data size is the same with experiment data-set in case there is a convergence issue
-            no_sim_data = len(self.S_sim[k])
+            no_sim_data = len(S_sim)
             no_exp_data = len(self.S_exp[k])
             if status == 0 and no_sim_data == no_exp_data:
                 self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
@@ -172,12 +170,15 @@ class ExaProb:
                 self.logger.info('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]: no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
                 sys.exit('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]: no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
 
+            # S_sim will be a list that contains a numpy array of stress corresponding to each file
+            self.S_sim.append(S_sim)
+
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
-            S_exp = abs(np.array(self.S_exp[k]))
-            S_sim = abs(np.array(self.S_sim[k]))
-
-            f[k] = np.sqrt(sum((S_sim-S_exp)**2)/sum(S_exp**2))
+            S_exp_abs = abs(self.S_exp[k])
+            S_sim_abs = abs(self.S_sim[k])
+            
+            f[k] = np.sqrt(sum((S_sim_abs-S_exp_abs)**2)/sum(S_exp_abs**2))
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))
                
         self.logger.info('')
@@ -192,9 +193,11 @@ class ExaProb:
 
         return F
 
-    def returnStress(self):
+    def return_stress(self):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
-        stress.append(self.S_exp) 
+        stress.append(self.S_exp)
         stress.append(self.S_sim)
+        #for k in range(len(self.Exper_input_files)):
+            #stress.extend([[ self.S_exp[k], self.S_sim[k] ]])
         return stress

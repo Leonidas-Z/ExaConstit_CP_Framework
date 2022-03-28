@@ -104,12 +104,8 @@ class Plot:
 
         if len(self.to_plot) > 0:
             unique_dim = np.unique(np.array([e[0].shape[1] for e in self.to_plot]))
-            #print(self.to_plot)
-            #print(unique_dim)
-            #print(self.to_plot[0])
             if len(unique_dim) > 1:
                 raise Exception("Inputs with different dimensions were added: %s" % unique_dim)
-
             self.n_dim = unique_dim[0]
 
         # actually call the class
@@ -154,7 +150,7 @@ class Plot:
         return self
 
     def add(self, F, **kwargs):
-        # kwargs includes all the addtional arguments for the matplotlib class (color, size, etc.)
+        
         if F is None:
             return self
         elif F.ndim == 1:
