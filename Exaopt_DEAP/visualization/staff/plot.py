@@ -104,6 +104,9 @@ class Plot:
 
         if len(self.to_plot) > 0:
             unique_dim = np.unique(np.array([e[0].shape[1] for e in self.to_plot]))
+            #print(self.to_plot)
+            #print(unique_dim)
+            #print(self.to_plot[0])
             if len(unique_dim) > 1:
                 raise Exception("Inputs with different dimensions were added: %s" % unique_dim)
 
