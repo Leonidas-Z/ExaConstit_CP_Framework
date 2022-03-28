@@ -4,7 +4,7 @@ from visualization.staff.docs import parse_doc_string
 from visualization.staff.plot import Plot, set_if_none
 
 
-class Scatter(Plot):
+class Stress(Plot):
 
     def __init__(self,
                  epsdot=1e-3,

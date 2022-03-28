@@ -10,10 +10,10 @@ This script is using pymoo module visualization folder to show useful plots of t
 '''
 
 
-NPOP = 52
-'''
+NPOP = 20
+
 # Read file
-output="checkpoint_files/output_gen_50.pkl"
+output="checkpoint_files/output_gen_1.pkl"
 
 # Retrieve the state of the specified checkpoint
 with open(output,"rb+") as ckp_file:
@@ -26,7 +26,7 @@ iter_tot = ckp["iter_tot"]
 last_gen = ckp["generation"]
 #NPOP = ckp["NPOP"]
 
-print(sys.getsizeof(pop_stress))
+#print(sys.getsizeof(pop_stress))
 
 # ================================ Post Processing ===================================
 # Choose which generation you want to show in plots
@@ -48,17 +48,27 @@ strain_rate=1e-3
 # second is the selected individual, 
 # third is if we want to use experiment [0] or simulation [1] data, 
 # forth is the selected experiment file used for the simulation 
+Exper_data = pop_stress[gen][best_idx][0]
+Simul_data = pop_stress[gen][best_idx][1]
 file=0
-plot2 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
+plot = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
 file=1
-plot3 = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
-'''
-popl=numpy.array([[1],[2],[3],[5],[3],[1]])
+plot = ExaPlots.MacroStressStrain(Exper_data = pop_stress[gen][best_idx][0][file], Simul_data = pop_stress[gen][best_idx][1][file], epsdot = strain_rate)
+
+#popl=numpy.array([[1],[2],[3],[5],[3],[1]])
 from visualization.scatter import Scatter
-plot = Scatter(tight_layout=False, grid=True)
-plot.add(popl, s=20)
+plot = Scatter(tight_layout=False)
+plot.add(pop_fit, s=20)
 #plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
+
+from visualization.stress import Stress
+stress = numpy.array(pop_stress[gen][best_idx][:][0])
+plot = Stress(tight_layout=False)
+plot.add(stress.transpose(), s=20)
+#plot.add(pop_stress[gen][best_idx][0][0], s=30, color="red")
+plot.show()
+
 '''
 from visualization.pcp import PCP
 plot = PCP(tight_layout=True)
@@ -77,8 +87,8 @@ for k in range(1,NPOP+1):
     if k%4==0:
         plot.add(pop_fit[k-4:k])
 plot.show()
-
 '''
+
 '''
 print(pop_stress[gen][0][1][0])
 print(pop_stress[gen][0][1][1])

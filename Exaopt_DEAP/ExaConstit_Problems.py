@@ -23,7 +23,7 @@ class ExaProb:
                  n_steps=[20,20],
                  n_dep=None,
                  ncpus=2,
-                 loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
+                 loc_mechanics="~/exaconstit_installation/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
                  Exper_input_files=['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
@@ -195,5 +195,6 @@ class ExaProb:
     def returnStress(self):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
-        stress.extend([self.S_exp, self.S_sim]) 
+        stress.append(self.S_exp) 
+        stress.append(self.S_sim)
         return stress
