@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import numpy as np
 
-class ExaPlots:          
-
+      
+class ExaPlots:
     def ObjFun3D(ref_points, pop_fit, best_idx):
 
         fig = plt.figure(figsize=(7, 7))
@@ -36,7 +36,7 @@ class ExaPlots:
         plt.legend()
         plt.tight_layout()
         plt.show()
-    
+
 
 
     def ObjFun2D(ref_points, pop_fit, best_idx=None):
@@ -62,27 +62,25 @@ class ExaPlots:
         ax.set_ylabel("$f_2(\mathbf{x})$", fontsize=15)
         ax.set_xlim(left=0, right=1) 
         ax.set_ylim(bottom=0, top=1) 
-       
+        
         plt.show()
 
 
-    def MacroStressStrain(Exper_data, Simul_data, epsdot, custom_dt_file=None, nsteps=None):
+    def StressStrain(Exper_data, Simul_data, epsdot, custom_dt_file=None):
         # How to plot the macroscopic stress strain data (Robert Carson)
 
-        # Data
-        S_sim = np.array(Simul_data)
+        # Need both S_sim and S_exp to be 1d arrays
         S_exp = np.array(Exper_data)
-       
+        S_sim = np.array(Simul_data)
+        
         # only here to have something that'll plot
-        if nsteps == None:
-            nsteps = len(S_exp)
+        nsteps = len(S_exp)
         if custom_dt_file == None:
             time = np.ones(nsteps)
         else:
             time = np.loadtxt(custom_dt_file)
 
-
-        font = {'size'   : 14}
+        font = {'size'   : 11}
         rc('font', **font)
         rc('mathtext', default='regular')
 
@@ -104,8 +102,11 @@ class ExaPlots:
         
         ax.plot(eps, S_exp, color='r', label='S_exp') #, linestyle='--')
         ax.plot(eps, S_sim, color='b', label ='S_sim')
-        ax.grid() 
+        ax.grid(linestyle = '--', linewidth = 0.5)
+        ax.set_xlim(left=0) 
+        ax.set_ylim(bottom=0) 
         ax.legend()
+
         # change this to fit your data                 
         # ax.axis([0, 0.01, 0, 0.3])
 
