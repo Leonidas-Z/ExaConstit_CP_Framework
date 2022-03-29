@@ -2,7 +2,6 @@ from matplotlib.pyplot import grid
 import numpy
 import pickle
 import sys
-from sklearn.feature_extraction import grid_to_graph
 
 
 ''' 
