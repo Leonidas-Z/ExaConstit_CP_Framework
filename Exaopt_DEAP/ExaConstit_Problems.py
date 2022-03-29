@@ -160,19 +160,23 @@ class ExaProb:
                 # Check if data size is the same with experiment data-set in case there is a convergence issue
                 no_sim_data = len(S_sim)
                 no_exp_data = len(self.S_exp[k])
+                
                 if status == 0 and no_sim_data == no_exp_data:
                     self.flag = 0  # successful
                     self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
                 elif no_sim_data < no_exp_data:  
                     self.flag = 1  # partially successful
-                    self.logger.warning('WARNING: Simulation has unconverged results no_sim_data={} < no_exp_data={}'.format(no_sim_data, no_exp_data))
-
+                    self.logger.warning('\nWARNING: Simulation has unconverged results no_sim_data={} < no_exp_data={}'.format(no_sim_data, no_exp_data))
+                    print('\nWARNING: Simulation has unconverged results no_sim_data={} < no_exp_data={}'.format(no_sim_data, no_exp_data))
+                    return
                 # S_sim will be a list that contains a numpy array of stress corresponding to each file
                 self.S_sim.append(S_sim)
-                
+
             else:
+                self.flag = 2
                 self.logger.error('\nERROR: Simulation did not run since the output file was empty or not existent')
-                sys.exit('\nERROR: Simulation did not run since the output file was empty or non existent')
+                print('\nERROR: Simulation did not run since the output file was empty or non existent')
+                return
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
