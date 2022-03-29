@@ -51,7 +51,7 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 15
+NGEN = 16
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 scaling=[1, 0.5]
