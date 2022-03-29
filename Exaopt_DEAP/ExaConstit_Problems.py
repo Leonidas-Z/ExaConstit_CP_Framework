@@ -151,27 +151,28 @@ class ExaProb:
             # Read the simulation output
             # If output file exists and it is not empty, read stress
             if os.path.exists(self.Sim_output_files[k]) and os.stat(self.Sim_output_files[k]).st_size != 0:
+
                 S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
                 # Macroscopic stress in the direction of load: 3rd column (z axis)
                 _S_sim = S_sim_data[:, 2]
                 # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
                 S_sim = np.unique(_S_sim)
-            else:
-                self.logger.error('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter, k))
-                sys.exit('\nERROR: Simulation did not run for iteration = {}, Exper_input_files[{}]'.format(self.iter, k))
+                # Check if data size is the same with experiment data-set in case there is a convergence issue
+                no_sim_data = len(S_sim)
+                no_exp_data = len(self.S_exp[k])
+                if status == 0 and no_sim_data == no_exp_data:
+                    self.flag = 0  # successful
+                    self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
+                elif no_sim_data < no_exp_data:  
+                    self.flag = 1  # partially successful
+                    self.logger.warning('WARNING: Simulation has unconverged results no_sim_data={} < no_exp_data={}'.format(no_sim_data, no_exp_data))
 
-            # Need more thought!!!!!!!!
-            # Check if data size is the same with experiment data-set in case there is a convergence issue
-            no_sim_data = len(S_sim)
-            no_exp_data = len(self.S_exp[k])
-            if status == 0 and no_sim_data == no_exp_data:
-                self.logger.info('\t\tSUCCESSFULL SIMULATION!!!')
+                # S_sim will be a list that contains a numpy array of stress corresponding to each file
+                self.S_sim.append(S_sim)
+                
             else:
-                self.logger.info('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]: no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
-                sys.exit('\nERROR: SIMULATION FAILED!\nERROR: Sim_output_files[{k}] does not have same raw dimension as Exper_input_files[{k}]: no_sim_data={s}, no_exp_data={e}'.format(k=k, s=no_sim_data, e=no_exp_data))
-
-            # S_sim will be a list that contains a numpy array of stress corresponding to each file
-            self.S_sim.append(S_sim)
+                self.logger.error('\nERROR: Simulation did not run since the output file was empty or not existent')
+                sys.exit('\nERROR: Simulation did not run since the output file was empty or non existent')
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
@@ -181,8 +182,6 @@ class ExaProb:
             f[k] = np.sqrt(sum((S_sim_abs-S_exp_abs)**2)/sum(S_exp_abs**2))
             self.logger.info('\t\tIndividual obj function: fit = '+str(f[k]))
                
-        self.logger.info('')
-
         # If use a simple GA scheme then return the summation of all the objective functions
         # If use a multiple_objective GA scheme then return individual objective functions
         if self.mult_GA == False:
@@ -191,13 +190,19 @@ class ExaProb:
         else:
             F = f
 
+        self.logger.info('')
         return F
+
 
     def return_stress(self):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
         stress.append(self.S_exp)
         stress.append(self.S_sim)
+        return stress
         #for k in range(len(self.Exper_input_files)):
             #stress.extend([[ self.S_exp[k], self.S_sim[k] ]])
-        return stress
+
+    def is_simulation_done(self):
+        return self.flag
+
