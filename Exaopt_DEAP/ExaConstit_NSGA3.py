@@ -5,7 +5,6 @@ import random
 from math import factorial
 import pickle
 
-from sympy import true
 from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
 
@@ -30,10 +29,10 @@ Also please look at the associated paper for the NSGAIII
 # Number of obj functions
 NOBJ = 2
 
-# Specify independent (athermal parameters)
+# Specify file independent (e.g. athermal parameters)
 IND_LOW = [150, 100,  50,  1500, 1e-5, 1e-3]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1]
-# Specify dependent (thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
+# Specify per file dependent (e.g. thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
 DEP_LOW = [1e-4, 1e-5, 1e-6]
 DEP_UP =  [1e-2, 1e-3, 1e-4]
 
@@ -369,11 +368,11 @@ plot.add(pop_fit[best_idx], linewidth=2, color="red")
 plot.show()
 
 from visualization.petal import Petal
-plot = Petal(bounds=[0, 0.02], tight_layout=False)
+plot = Petal(bounds=[0, 0.05], tight_layout=False)
 plot.add(pop_fit[best_idx])
 plot.show()
 #Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.02], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
+plot = Petal(bounds=[0, 0.05], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
 for k in range(1,NPOP+1):
     if k%4==0:
         plot.add(pop_fit[k-4:k])
