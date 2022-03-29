@@ -86,7 +86,7 @@ def no_ticks(ax):
 
 
 def normalize(data, bounds, reverse=False, return_bounds=False):
-    from pymoo.util.normalization import normalize as _normalize
+    from visualization.staff.normalization import normalize as _normalize
 
     _F = np.row_stack([e[0] for e in data])
     if bounds is None:

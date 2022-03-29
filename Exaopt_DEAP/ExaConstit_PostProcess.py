@@ -10,7 +10,7 @@ This script is using pymoo module visualization folder to show useful plots of t
 
 
 # Read file
-output="checkpoint_files/output_gen_2.pkl"
+output="checkpoint_files/output_gen_1.pkl"
 
 # Retrieve the state of the specified checkpoint
 with open(output,"rb+") as ckp_file:
