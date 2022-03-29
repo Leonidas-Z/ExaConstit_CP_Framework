@@ -58,7 +58,7 @@ plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
 
 from visualization.pcp import PCP
-plot = PCP(tight_layout=False)
+plot = PCP(bounds=[0, 0.5], tight_layout=False)
 plot.set_axis_style(color="grey", alpha=0.5)
 plot.add(pop_fit, color="grey", alpha=0.3)
 plot.add(pop_fit[best_idx], linewidth=2, color="red")
