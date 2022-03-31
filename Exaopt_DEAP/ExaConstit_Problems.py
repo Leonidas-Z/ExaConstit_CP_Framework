@@ -46,7 +46,8 @@ class ExaProb:
         self.mult_GA = mult_GA
 
         # Make log file to track the runs. This file will be created after the code starts to run.
-        logging.basicConfig(filename='logbook3_ExaProb.log', level=logging.INFO, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
+        level = logging.INFO
+        logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
         self.logger = logging.getLogger()
 
         # Check if we have as many files as the objective functions
@@ -173,8 +174,8 @@ class ExaProb:
                     self.write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
                 elif no_sim_data < no_exp_data:  
                     self.flag = 1  # partially successful
-                    self.eval_cycle = self.eval_cycle-1
                     text = 'Simulation has unconverged results for eval_cycle = {}: no_sim_data = {} < no_exp_data = {}'.format(self.eval_cycle, no_sim_data, no_exp_data)
+                    self.eval_cycle = self.eval_cycle-1
                     self.write_ExaProb_log(text, 'warning', changeline = True)
                     return
                 # S_sim will be a list that contains a numpy array of stress corresponding to each file
@@ -182,8 +183,8 @@ class ExaProb:
 
             else:
                 self.flag = 2
-                self.eval_cycle = self.eval_cycle-1
                 text = 'Simulation did not run for eval_cycle = {}. The output file was empty or not existent!'.format(self.eval_cycle)
+                self.eval_cycle = self.eval_cycle-1
                 self.write_ExaProb_log(text, 'warning', changeline = True)
                 return
 
@@ -208,15 +209,12 @@ class ExaProb:
         return F
 
 
-
     def return_stress(self):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
         stress.append(self.S_exp)
         stress.append(self.S_sim)
         return stress
-        #for k in range(len(self.Exper_input_files)):
-            #stress.extend([[ self.S_exp[k], self.S_sim[k] ]])
 
 
     def is_simulation_done(self):
@@ -224,7 +222,6 @@ class ExaProb:
 
 
     def write_ExaProb_log(self, text, type='debug', changeline=False):
-        
         if changeline == True:
             self.logger.info('\n')
             print('\n')
