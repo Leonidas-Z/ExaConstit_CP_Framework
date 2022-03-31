@@ -30,7 +30,7 @@ Also please look at the associated paper for the NSGAIII
 NOBJ = 2
 
 # Specify file independent (e.g. athermal parameters)
-IND_LOW = [150, 100,  50,  1500, 1e-5, 1e-3]
+IND_LOW = [130, 100,  50,  1500, 1e-5, 1e-3]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1]
 # Specify per file dependent (e.g. thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
 DEP_LOW = [1e-4, 1e-5, 1e-6]
@@ -51,7 +51,7 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 20
+NGEN = 10
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 p = [50, 0]
@@ -94,7 +94,7 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_30.pkl"
 
 # Specify how many simulation failures in total to have so to terminate the optimization framework
 fail_limit = 5
@@ -224,7 +224,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Maps the fitness with the invalid_ind. Initiates the obj function calculation for each invalid_ind
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]   
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
-        
+
 
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 
@@ -241,8 +241,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
-                ind1 = invalid_ind[random.randrange(NPOP)]
-                ind2 = invalid_ind[random.randrange(NPOP)]
+                ind1 = invalid_ind[random.randrange(len(invalid_ind))]
+                ind2 = invalid_ind[random.randrange(len(invalid_ind))]
                 new_ind = toolbox.mate(ind1, ind2)[0]                   
                 new_ind = toolbox.mutate(new_ind)[0]
                 
@@ -314,8 +314,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
-                ind1 = invalid_ind[random.randrange(NPOP)]
-                ind2 = invalid_ind[random.randrange(NPOP)]
+                ind1 = invalid_ind[random.randrange(len(invalid_ind))]
+                ind2 = invalid_ind[random.randrange(len(invalid_ind))]
                 new_ind = toolbox.mate(ind1, ind2)[0]                   
                 new_ind = toolbox.mutate(new_ind)[0]
                 
@@ -375,6 +375,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 # Call the optimization routine
 iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
+
+
+
 
 
 
