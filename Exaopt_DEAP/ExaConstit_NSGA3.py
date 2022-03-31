@@ -54,7 +54,7 @@ NDIM = len(BOUND_LOW)
 NGEN = 10
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [50, 0]
+p = [10, 0]
 scaling = [1, 0.5]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
