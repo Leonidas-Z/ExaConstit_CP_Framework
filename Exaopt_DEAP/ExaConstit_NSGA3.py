@@ -1,9 +1,9 @@
 from deap import creator, base, tools, algorithms
-from matplotlib.pyplot import grid, tight_layout
 import numpy
 import random
 from math import factorial
 import pickle
+import sys
 
 from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
@@ -51,11 +51,11 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 16
+NGEN = 20
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-scaling=[1, 0.5]
-p=[20, 0]
+p = [50, 0]
+scaling = [1, 0.5]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
 if p[1]!=0 and scaling[1]!=0:
@@ -80,7 +80,7 @@ problem = ExaProb(n_obj=NOBJ,
                   mult_GA=True,
                   n_dep=n_dep,
                   n_steps=[20,20],
-                  ncpus = 4,
+                  ncpus = 20,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
@@ -94,8 +94,10 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None#"checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_2.pkl"
 
+# Specify how many simulation failures in total to have so to terminate the optimization framework
+fail_limit = 5
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -161,9 +163,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     stats1.register("min", numpy.min, axis=0)
     stats1.register("max", numpy.max, axis=0)
 
+
     # If checkpoint has a file name, read and retrieve the state of last checkpoint from this file
     # If not then start from the beginning by generating the initial population
     if checkpoint:
+        
         with open(checkpoint,"rb+") as ckp_file:
             ckp = pickle.load(ckp_file)
         
@@ -190,20 +194,22 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logfile2 = open("logbook2_solutions.log","w+")
         logfile2.write("loaded checkpoint: {}\n".format(checkpoint))
 
+
     else:
         # Specify seed (need both numpy and random OR change niching in DEAP script)
         random.seed(seed)  
         numpy.random.seed(seed) 
         
-        # Initilize loggers
+        # Initialize loggers
         logbook1 = tools.Logbook()
         logfile1 = open("logbook1_stats.log","w+")
         logbook2 = tools.Logbook()
         logfile2 = open("logbook2_solutions.log","w+")
 
-        # Initialize rest
+        # Initialize counters and lists
         iter_pgen = 0       # iterations per generation
         iter_tot = 0        # total iterations
+        fail_count = 0
         start_gen = 1       # starting generation
         pop_fit = []
         pop_param = []
@@ -219,10 +225,34 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]   
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
         
+
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
+            print('old '+str(ind))     
+#_______________________________________________________________________________________________
+            # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
+            # Stopping criteria: If there is more than break_limit number of simulation failures, stop
+            while problem.is_simulation_done() != 0 :
+                
+                fail_count+=1
+                if fail_count > fail_limit: 
+                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
+                    problem.write_ExaProb_log(text, "error", changeline=True)
+                    sys.exit()
+
+                ind1 = invalid_ind[random.randrange(NPOP)]
+                ind2 = invalid_ind[random.randrange(NPOP)]
+                new_ind = toolbox.mate(ind1, ind2)[0]                   
+                new_ind = toolbox.mutate(new_ind)[0]
+                
+                text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
+                problem.write_ExaProb_log(text, "warning", changeline=False)
+
+                fit = toolbox.evaluate(new_ind)
+                ind = new_ind
+#_______________________________________________________________________________________________
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
 
@@ -250,6 +280,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
 
+
     # Begin the generational process
     for gen in range(start_gen, NGEN+1):
           
@@ -270,9 +301,31 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Assign the new values in the individuals
         iter_pgen = 0 
-        for ind, fit in zip(invalid_ind, fitness_eval):                      
+        for ind, fit in zip(invalid_ind, fitness_eval):            
             iter_pgen+=1
             iter_tot+=1
+#_______________________________________________________________________________________________
+            # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
+            # Stopping criteria: If there is more than break_limit number of simulation failures, stop
+            while problem.is_simulation_done() != 0 :
+                
+                fail_count+=1
+                if fail_count > fail_limit: 
+                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
+                    problem.write_ExaProb_log(text, "error", changeline=True)
+                    sys.exit()
+
+                ind1 = invalid_ind[random.randrange(NPOP)]
+                ind2 = invalid_ind[random.randrange(NPOP)]
+                new_ind = toolbox.mate(ind1, ind2)[0]                   
+                new_ind = toolbox.mutate(new_ind)[0]
+                
+                text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
+                problem.write_ExaProb_log(text, "warning", changeline=False)
+
+                fit = toolbox.evaluate(new_ind)
+                ind = new_ind
+#_______________________________________________________________________________________________
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
 
@@ -335,6 +388,7 @@ pop_fit = numpy.array(pop_fit)
 # Find best solution
 best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
+
 # Visualize the results (here we used the visualization module of pymoo extensively)
 
 from visualization.ExaPlotLibrary import ExaPlots
@@ -359,35 +413,3 @@ plot = Scatter()
 plot.add(pop_fit, s=20)
 plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
-
-from visualization.pcp import PCP
-plot = PCP(tight_layout=False)
-plot.set_axis_style(color="grey", alpha=0.5)
-plot.add(pop_fit, color="grey", alpha=0.3)
-plot.add(pop_fit[best_idx], linewidth=2, color="red")
-plot.show()
-
-from visualization.petal import Petal
-plot = Petal(bounds=[0, 0.05], tight_layout=False)
-plot.add(pop_fit[best_idx])
-plot.show()
-#Put out of comments if we want to see all the individual fitnesses and not only the best
-plot = Petal(bounds=[0, 0.05], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
-for k in range(1,NPOP+1):
-    if k%4==0:
-        plot.add(pop_fit[k-4:k])
-plot.show()
-
-
-'''
-from visualization.stress import Stress
-strain_rate=1e-3
-plot = Stress(tight_layout=False, epsdot=1e-3)
-S_exp = pop_stress[gen][best_idx][0]
-S_sim = pop_stress[gen][best_idx][1]
-plot.add(S_exp, plot_type="line")
-plot.add(S_sim, plot_type="line")
-
-#plot.add(pop_stress[gen][best_idx][1][0], plot_type="line")
-plot.show()
-'''
