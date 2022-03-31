@@ -230,10 +230,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
-            print('old '+str(ind))     
 #_______________________________________________________________________________________________
             # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
-            # Stopping criteria: If there is more than break_limit number of simulation failures, stop
+            # Stopping criteria: If there is more than fail_limit number of simulation failures, stop
             while problem.is_simulation_done() != 0 :
                 
                 fail_count+=1
@@ -306,7 +305,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_tot+=1
 #_______________________________________________________________________________________________
             # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
-            # Stopping criteria: If there is more than break_limit number of simulation failures, stop
+            # Stopping criteria: If there is more than fail_limit number of simulation failures, stop
             while problem.is_simulation_done() != 0 :
                 
                 fail_count+=1
@@ -376,6 +375,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 # Call the optimization routine
 iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
+
 
 
 #================================ Post Processing ===================================
