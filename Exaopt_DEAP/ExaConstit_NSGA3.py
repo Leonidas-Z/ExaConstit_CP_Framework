@@ -5,6 +5,8 @@ from math import factorial
 import pickle
 import sys
 
+from pyrsistent import s
+
 from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
 
@@ -30,7 +32,7 @@ Also please look at the associated paper for the NSGAIII
 NOBJ = 2
 
 # Specify file independent (e.g. athermal parameters)
-IND_LOW = [130, 100,  50,  1500, 1e-5, 1e-3]
+IND_LOW = [50, 100,  50,  1500, 1e-5, 1e-3]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1]
 # Specify per file dependent (e.g. thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
 DEP_LOW = [1e-4, 1e-5, 1e-6]
@@ -94,10 +96,11 @@ seed=None
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_30.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_10.pkl"
 
 # Specify how many simulation failures in total to have so to terminate the optimization framework
-fail_limit = 5
+fail_limit = 100
+
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -138,18 +141,16 @@ toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.at
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
-
 #=========================== Initialize GA Operators ============================
 #### Evolution Methods
 # Function that returns the objective functions values as a dictionary (if n_obj=3 it will evaluate the obj function 3 times and will return 3 values (str) - It runs the problem.evaluate for n_obj times)
 toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
 # Crossover function using the cxSimulatedBinaryBounded method
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
-# Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fitution much more different.
+# Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fit much more different.
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
-
 
 
 #================================ Evolution Algorithm ===========================
@@ -162,7 +163,6 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     stats1.register("std", numpy.std, axis=0)
     stats1.register("min", numpy.min, axis=0)
     stats1.register("max", numpy.max, axis=0)
-
 
     # If checkpoint has a file name, read and retrieve the state of last checkpoint from this file
     # If not then start from the beginning by generating the initial population
@@ -180,6 +180,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             pop_fit = ckp["pop_fit"]
             pop_param = ckp["pop_param"]
             pop_stress = ckp["pop_stress"]
+            fail_count = ckp["fail_count"]
             iter_tot = ckp["iter_tot"]
             start_gen = ckp["generation"] + 1
             if start_gen>NGEN: gen = start_gen
@@ -187,13 +188,13 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             logbook2 = ckp["logbook2"]
         except:
             print("\nERROR: Wrong Checkpoint file")
+            sys.exit()
 
         # Open log files and erase their contents
         logfile1 = open("logbook1_stats.log","w+")
         logfile1.write("loaded checkpoint: {}\n".format(checkpoint))
         logfile2 = open("logbook2_solutions.log","w+")
         logfile2.write("loaded checkpoint: {}\n".format(checkpoint))
-
 
     else:
         # Specify seed (need both numpy and random OR change niching in DEAP script)
@@ -209,7 +210,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Initialize counters and lists
         iter_pgen = 0       # iterations per generation
         iter_tot = 0        # total iterations
-        fail_count = 0
+        fail_count = 1
         start_gen = 1       # starting generation
         pop_fit = []
         pop_param = []
@@ -222,38 +223,42 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Returns the individuals with an invalid fitness
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
         # Maps the fitness with the invalid_ind. Initiates the obj function calculation for each invalid_ind
-        invalid_ind = [ind for ind in pop if not ind.fitness.valid]   
+        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+        len_invalid_ind = len(invalid_ind)
+
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
 
-
         # Evaluates the fitness for each invalid_ind and assigns them the new values
-        for ind, fit in zip(invalid_ind, fitness_eval): 
+        for k ,ind, fit in zip(range(len(invalid_ind)), invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
 #_______________________________________________________________________________________________
-            # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
-            # Stopping criteria: If there is more than fail_limit number of simulation failures, stop
-            while problem.is_simulation_done() != 0 :
-                
-                fail_count+=1
-                if fail_count > fail_limit: 
+            # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
+            # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
+            if not problem.is_simulation_done() == 0:
+
+                while fail_count <= fail_limit:
+                    text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
+                    problem.write_ExaProb_log(text, "warning", changeline=False)
+
+                    ind1 = invalid_ind[random.randrange(len_invalid_ind)]
+                    ind2 = invalid_ind[random.randrange(len_invalid_ind)]
+                    ind[:] = toolbox.mate(ind1, ind2)[0]             
+                    ind[:] = toolbox.mutate(ind)[0]
+                    fit = toolbox.evaluate(ind)
+
+                    if problem.is_simulation_done() == 0: 
+                        break
+
+                    fail_count+=1
+                else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
-                ind1 = invalid_ind[random.randrange(len(invalid_ind))]
-                ind2 = invalid_ind[random.randrange(len(invalid_ind))]
-                new_ind = toolbox.mate(ind1, ind2)[0]                   
-                new_ind = toolbox.mutate(new_ind)[0]
-                
-                text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                problem.write_ExaProb_log(text, "warning", changeline=False)
-
-                fit = toolbox.evaluate(new_ind)
-                ind = new_ind
-#_______________________________________________________________________________________________
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
+#_______________________________________________________________________________________________
 
         # Write log statistics about the new population
         logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
@@ -273,11 +278,14 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             pop_fit_gen.append(ind.fitness.values)
             pop_par_gen.append(tuple(ind))
             pop_stress_gen.append(ind.stress)
-            
+
         # Keep fitnesses, solutions and stress for every gen in a list
         pop_fit.append(pop_fit_gen)
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
+
+        print('fit '+str(len(pop_fit_gen)))
+        print(pop_fit_gen)
 
 
     # Begin the generational process
@@ -304,29 +312,32 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
 #_______________________________________________________________________________________________
-            # If simulation failure, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
-            # Stopping criteria: If there is more than fail_limit number of simulation failures, stop
-            while problem.is_simulation_done() != 0 :
-                
-                fail_count+=1
-                if fail_count > fail_limit: 
+            # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
+            # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
+            if not problem.is_simulation_done() == 0:
+
+                while fail_count <= fail_limit:
+                    text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
+                    problem.write_ExaProb_log(text, "warning", changeline=False)
+
+                    ind1 = invalid_ind[random.randrange(len_invalid_ind)]
+                    ind2 = invalid_ind[random.randrange(len_invalid_ind)]
+                    ind[:] = toolbox.mate(ind1, ind2)[0]             
+                    ind[:] = toolbox.mutate(ind)[0]
+                    fit = toolbox.evaluate(ind)
+
+                    if problem.is_simulation_done() == 0: 
+                        break
+
+                    fail_count+=1
+                else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
-                ind1 = invalid_ind[random.randrange(len(invalid_ind))]
-                ind2 = invalid_ind[random.randrange(len(invalid_ind))]
-                new_ind = toolbox.mate(ind1, ind2)[0]                   
-                new_ind = toolbox.mutate(new_ind)[0]
-                
-                text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                problem.write_ExaProb_log(text, "warning", changeline=False)
-
-                fit = toolbox.evaluate(new_ind)
-                ind = new_ind
-#_______________________________________________________________________________________________
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
+#_______________________________________________________________________________________________
 
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
@@ -359,7 +370,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Generate a checkpoint and output files (the output file will be independent of DEAP module)
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
-            ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
+            ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot,\
+                generation=gen, fail_count=fail_count, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
             # Fill the dictionary using the dict(key=value[, ...]) constructor
