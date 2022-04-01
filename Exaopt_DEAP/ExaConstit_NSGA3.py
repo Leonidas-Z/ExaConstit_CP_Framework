@@ -243,7 +243,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             iter_pgen+=1
             iter_tot+=1
 #_______________________________________________________________________________________________
-            # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
+            # If simulation failed due to parameters, generate a new individual and run simulation with the new one
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
 
