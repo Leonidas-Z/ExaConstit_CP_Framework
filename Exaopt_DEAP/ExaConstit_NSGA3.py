@@ -34,7 +34,7 @@ NOBJ = 2
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
 # How to use: Specify their upper and their lower bounds
-IND_LOW = [1, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
+IND_LOW = [150, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
 # Specify parameters are different (dependent) per experiment data file (e.g. thermal parameters). 
 # If no such parameters, set DEP_LOW = None, DEP_UP = None
