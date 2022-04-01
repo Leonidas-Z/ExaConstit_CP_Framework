@@ -34,7 +34,7 @@ NOBJ = 2
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
 # How to use: Specify their upper and their lower bounds
-IND_LOW = [150, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
+IND_LOW = [1, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
 # Specify parameters are different (dependent) per experiment data file (e.g. thermal parameters). 
 # If no such parameters, set DEP_LOW = None, DEP_UP = None
@@ -251,13 +251,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
                     fail_count+=1
-                    # Need 2 different individuals to apply mate and mutate and derive a new individual
-                    ind_idx = random.sample(range(0, len_invalid_ind), 2)
-                    ind1 = invalid_ind[ind_idx[0]]
-                    ind2 = invalid_ind[ind_idx[1]]
-                    # Replace old individual with the new one with the hope that now the simulation will run normally
-                    ind[:] = toolbox.mate(ind1, ind2)[0]             
-                    ind[:] = toolbox.mutate(ind)[0]
+                    # Replace old individual with the new random one with the hope that now the simulation will run normally          
+                    ind[:] = toolbox.individual()
                     # Run simulation to find the obj functions
                     fit = toolbox.evaluate(ind)
                     # If simulation successful break the loop 
