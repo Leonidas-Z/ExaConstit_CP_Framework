@@ -10,7 +10,7 @@ This script is using pymoo module visualization folder to show useful plots of t
 
 
 # Read file
-output="checkpoint_files/output_gen_1.pkl"
+output="checkpoint_files/output_gen_12.pkl"
 
 # Retrieve the state of the specified checkpoint
 with open(output,"rb+") as ckp_file:
@@ -26,28 +26,15 @@ last_gen = ckp["generation"]
 # Choose which generation you want to show in plots
 gen = -1 # here we chose the last gen (best)
 pop_fit = pop_fit[gen]  
-pop_fit = numpy.array(pop_fit) 
+pop_fit = numpy.array(pop_fit)
+
 NPOP = pop_fit.shape[0]
 NONJ = pop_fit.shape[1]
 
-#NOBJ = numpy.array(pop_fit).shape[2]
 
 # Find best solution
 from ExaConstit_SolPicker import BestSol
-best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
-
-print(best_idx)
-
-
-#================================ Post Processing ===================================
-# Choose which generation you want to show in plots
-gen = -1 # here we chose the last gen (best)
-pop_fit = pop_fit[gen]  
-pop_fit = numpy.array(pop_fit) 
-
-
-# Find best solution
-best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
+best_idx=BestSol(pop_fit, weights=[1, 1], normalize=False).EUDIST()
 
 
 # Visualize the results (here we used the visualization module of pymoo extensively)

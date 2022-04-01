@@ -44,7 +44,7 @@ DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
 # Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperatures, the strain rates etc).
 # If no such parameters, set DEP_UNOPT = None. 
 # How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
-DEP_UNOPT = [[270, 1e-3],[300, 2e-3]]
+DEP_UNOPT = [[270, 1e-3],[400, 2e-3]]
 
 
 # Final Bounds
@@ -96,7 +96,7 @@ problem = ExaProb(n_obj=NOBJ,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
-                  Toml_files = ['./mtsdd_bcc.toml', './mtsdd_bcc.toml'],
+                  Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'],
                   )
 
 # Specify seed (if checkpoint!=None it doesn't matter)
