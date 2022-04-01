@@ -33,14 +33,18 @@ Also please look at the associated paper for the NSGAIII
 NOBJ = 2
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
+# Specify their upper and their lower bounds
 IND_LOW = [150, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
-# Specify dependent per experiment data file parameters (e.g. thermal parameters). If no dependent then set DEP_LOW = None, DEP_UP = None
+# Specify dependent per experiment data file parameters (e.g. thermal parameters). 
+# If no dependent then set DEP_LOW = None, DEP_UP = None
+# Specify their upper and their lower bounds
 DEP_LOW = None      #[1e-4, 1e-5, 1e-6]
 DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
 # Specify dependent parameters that will not be optimized and are different (dependent) per experiment data file (here is the temperature per file).
-# If no such parameters, set DEP_UNOPT = None
-DEP_UNOPT = [[270],[300]]
+# If no such parameters, set DEP_UNOPT = None. 
+# How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
+DEP_UNOPT = [[270, 1e-3],[300, 2e-3]]
 
 
 # Final Bounds
