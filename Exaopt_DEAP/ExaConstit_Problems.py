@@ -10,7 +10,7 @@ from ExaConstit_MatGen import Matgen
 
 class ExaProb:
 
-    '''
+    ''' 
     This is the constructor of the objective function evaluation
     All the assigned files must have same length with the n_obj
     (for each obj function we need a different Experiment data set etc.)
@@ -23,6 +23,7 @@ class ExaProb:
                  mult_GA=False,
                  n_steps=[20,20],
                  n_dep=None,
+                 dep_unopt=None,
                  ncpus=2,
                  loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
@@ -34,6 +35,7 @@ class ExaProb:
 
         self.n_obj = n_obj
         self.n_dep = n_dep
+        self.dep_unopt = dep_unopt
         self.ncpus = ncpus
         # self.loc_input_files=loc_input_files
         # self.loc_output_files=loc_output_files
@@ -46,7 +48,7 @@ class ExaProb:
         self.mult_GA = mult_GA
 
         # Make log file to track the runs. This file will be created after the code starts to run.
-        level = logging.INFO
+        level = logging.DEBUG
         logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
         self.logger = logging.getLogger()
 
@@ -56,7 +58,7 @@ class ExaProb:
                 self.write_ExaProb_log('The length of "{}" is not equal to NOBJ={}'.format(name, n_obj), type = 'error', changeline = True)
                 sys.exit()
 
-            if mult_GA == False:
+            if len(data) != len(Exper_input_files) and mult_GA == False:
                 self.write_ExaProb_log('The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)), 'error', changeline = True)
                 sys.exit()
         
@@ -105,14 +107,13 @@ class ExaProb:
         # Separate parameters into dependent (thermal) and independent (athermal) groups
         # x_group[0] will be the independent group. The rest will be the dependent groups for each objective
         if self.n_dep != None:
-            self.n_ind = len(x) - self.n_obj*self.n_dep
+            self.n_ind = len(x) - len(self.Exper_input_files)*self.n_dep
             x_dep = x[self.n_ind:]
             x_group = [x[0:self.n_ind]]
             x_group.extend([x_dep[k:k+self.n_dep] for k in range(0, len(x_dep), self.n_dep)])
         else:
             self.n_ind = len(x)
             x_group = [x[0:self.n_ind]]
-
 
         # Count iterations and save solutions
         self.eval_cycle += 1
@@ -138,10 +139,16 @@ class ExaProb:
 
             # Create mat file: props_cp_mts.txt and use the file for multiobj if more files
             try:
-                if self.n_dep != None:
-                    Matgen(x_ind=x_group[0], x_dep=x_group[k+1])
+                if self.dep_unopt:
+                    if self.n_dep:
+                        Matgen(x_ind=x_group[0], x_dep=x_group[k+1], x_dep_unopt = self.dep_unopt[k])
+                    else:
+                        Matgen(x_ind=x_group[0], x_dep_unopt = self.dep_unopt[k])
                 else:
-                    Matgen(x_ind=x_group[0])
+                    if self.n_dep:
+                        Matgen(x_ind=x_group[0], x_dep=x_group[k+1])
+                    else:
+                        Matgen(x_ind=x_group[0])
             except:
                 text = 'Unable to generate material properties using Matgen!'
                 self.write_ExaProb_log(text, 'error', changeline = True)

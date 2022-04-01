@@ -11,7 +11,7 @@ from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
 
 
-'''
+''' 
 ExaConstit Optimization Routine (LZ)
 
 This script is using the NSGAIII algorithm from the DEAP module and intends
@@ -26,17 +26,22 @@ https://deap.readthedocs.io/en/master/index.html
 Also please look at the associated paper for the NSGAIII
 '''
 
+
 #============================== Input Parameters ================================
 # Problem Parameters
 # Number of obj functions
 NOBJ = 2
 
-# Specify file independent (e.g. athermal parameters)
-IND_LOW = [50, 100,  50,  1500, 1e-5, 1e-3]
-IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1]
-# Specify per file dependent (e.g. thermal parameters). If no dependent then DEP_LOW = None, DEP_UP = None
-DEP_LOW = [1e-4, 1e-5, 1e-6]
-DEP_UP =  [1e-2, 1e-3, 1e-4]
+# Specify independent per experiment data file parameters (e.g. athermal parameters)
+IND_LOW = [0, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
+IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
+# Specify dependent per experiment data file parameters (e.g. thermal parameters). If no dependent then set DEP_LOW = None, DEP_UP = None
+DEP_LOW = None #[1e-4, 1e-5, 1e-6]
+DEP_UP =  None #[1e-2, 1e-3, 1e-4]
+# Specify dependent parameters that will not be optimized and are different (dependent) per experiment data file (here is the temperature per file).
+# If no such parameters, set DEP_UNOPT = None
+DEP_UNOPT = [[270], [300]]
+
 
 # Final Bounds
 BOUND_LOW = IND_LOW
@@ -53,10 +58,10 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 10
+NGEN = 20
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [10, 0]
+p = [50, 0]
 scaling = [1, 0.5]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
@@ -81,6 +86,7 @@ MUTPB = 1.0
 problem = ExaProb(n_obj=NOBJ,
                   mult_GA=True,
                   n_dep=n_dep,
+                  dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
                   ncpus = 20,
                   #loc_mechanics_bin ="",
@@ -99,7 +105,7 @@ checkpoint_freq = 1
 checkpoint= None #"checkpoint_files/checkpoint_gen_10.pkl"
 
 # Specify how many simulation failures in total to have so to terminate the optimization framework
-fail_limit = 100
+fail_limit = 5
 
 
 
@@ -240,17 +246,19 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count <= fail_limit:
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
-
-                    ind1 = invalid_ind[random.randrange(len_invalid_ind)]
-                    ind2 = invalid_ind[random.randrange(len_invalid_ind)]
+                    fail_count+=1
+                    # Need 2 different individuals to apply mate and mutate and derive a new individual
+                    ind_idx = random.sample(range(0, len_invalid_ind), 2)
+                    ind1 = invalid_ind[ind_idx[0]]
+                    ind2 = invalid_ind[ind_idx[1]]
+                    # Replace old individual with the new one with the hope that now the simulation will run normally
                     ind[:] = toolbox.mate(ind1, ind2)[0]             
                     ind[:] = toolbox.mutate(ind)[0]
+                    # Run simulation to find the obj functions
                     fit = toolbox.evaluate(ind)
-
+                    # If simulation successful break the loop 
                     if problem.is_simulation_done() == 0: 
                         break
-
-                    fail_count+=1
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
                     problem.write_ExaProb_log(text, "error", changeline=True)
@@ -319,17 +327,19 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count <= fail_limit:
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
-
-                    ind1 = invalid_ind[random.randrange(len_invalid_ind)]
-                    ind2 = invalid_ind[random.randrange(len_invalid_ind)]
+                    fail_count+=1
+                    # Need 2 different individuals to apply mate and mutate and derive a new individual
+                    ind_idx = random.sample(range(0, len_invalid_ind), 2)
+                    ind1 = invalid_ind[ind_idx[0]]
+                    ind2 = invalid_ind[ind_idx[1]]
+                    # Replace old individual with the new one with the hope that now the simulation will run normally
                     ind[:] = toolbox.mate(ind1, ind2)[0]             
                     ind[:] = toolbox.mutate(ind)[0]
+                    # Run simulation to find the obj functions
                     fit = toolbox.evaluate(ind)
-
+                    # If simulation successful break the loop   
                     if problem.is_simulation_done() == 0: 
                         break
-
-                    fail_count+=1
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
                     problem.write_ExaProb_log(text, "error", changeline=True)
