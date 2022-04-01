@@ -36,8 +36,8 @@ NOBJ = 2
 IND_LOW = [150, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
 # Specify dependent per experiment data file parameters (e.g. thermal parameters). If no dependent then set DEP_LOW = None, DEP_UP = None
-DEP_LOW = None #[1e-4, 1e-5, 1e-6]
-DEP_UP =  None #[1e-2, 1e-3, 1e-4]
+DEP_LOW = None      #[1e-4, 1e-5, 1e-6]
+DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
 # Specify dependent parameters that will not be optimized and are different (dependent) per experiment data file (here is the temperature per file).
 # If no such parameters, set DEP_UNOPT = None
 DEP_UNOPT = [[270],[300]]
@@ -291,9 +291,6 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         pop_fit.append(pop_fit_gen)
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
-
-        print('fit '+str(len(pop_fit_gen)))
-        print(pop_fit_gen)
 
 
     # Begin the generational process
