@@ -52,10 +52,10 @@
 #The Fixed field is ignored. Therefore, you should really only include one.
 [Time]
     [Time.Fixed]
-        dt = 1.0
-        t_final = 1.0
-    [Time.Custom]
-        nsteps = 20
+        dt = 0.05
+        t_final = 1
+    #[Time.Custom]
+        #nsteps = 20
         #floc = "custom_dt.txt"
 #Our visualizations options
 [Visualizations]
