@@ -53,7 +53,7 @@ class ExaProb:
         self.logger = logging.getLogger()
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files"]):
+        for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files", "DEP_UNOPT"]):
             if len(data) != n_obj and mult_GA==True:
                 self.write_ExaProb_log('The length of "{}" is not equal to NOBJ={}'.format(name, n_obj), type = 'error', changeline = True)
                 sys.exit()
