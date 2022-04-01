@@ -41,7 +41,7 @@ IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
 # How to use: Specify their upper and their lower bounds
 DEP_LOW = None      #[1e-4, 1e-5, 1e-6]
 DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
-# Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperature).
+# Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperatures, the strain rates etc).
 # If no such parameters, set DEP_UNOPT = None. 
 # How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
 DEP_UNOPT = [[270, 1e-3],[300, 2e-3]]
