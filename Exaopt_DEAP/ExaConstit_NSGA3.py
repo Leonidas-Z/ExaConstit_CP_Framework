@@ -5,8 +5,6 @@ from math import factorial
 import pickle
 import sys
 
-from pyrsistent import s
-
 from ExaConstit_Problems import ExaProb
 from ExaConstit_SolPicker import BestSol
 
@@ -348,7 +346,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
-        pop = toolbox.select(pop + offspring, NPOP)                            
+        pop = toolbox.select(pop + offspring, NPOP)
+        # How to find Number of non-dominated solutions
+        # Stopping criteria should written here                            
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
