@@ -1,4 +1,4 @@
-from deap import creator, base, tools, algorithms
+from DEAP_mod import creator, base, tools, algorithms
 import numpy
 import random
 from math import factorial
@@ -60,7 +60,7 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 15
+NGEN = 30
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 p = [50, 0]
@@ -161,6 +161,7 @@ toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_U
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
 
 
+
 #================================ Evolution Algorithm ===========================
 # Here we construct our main algorithm NSGAIII
 def main(seed=None, checkpoint=None, checkpoint_freq=1):
@@ -237,7 +238,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
 
         # Evaluates the fitness for each invalid_ind and assigns them the new values
-        for k ,ind, fit in zip(range(len(invalid_ind)), invalid_ind, fitness_eval): 
+        for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
 #_______________________________________________________________________________________________
@@ -346,9 +347,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
         # Please change to random.shuffle
-        pop = toolbox.select(pop + offspring, NPOP)
+        NSel, pop = toolbox.select(pop + offspring, NPOP)
         # How to find Number of non-dominated solutions
-        # Stopping criteria should written here                            
+        # Stopping criteria should written here
+        print(NSel)                            
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
@@ -412,7 +414,7 @@ best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
 
 # Visualize the results (here we used the visualization module of pymoo extensively)
 
-from visualization.ExaPlotLibrary import ExaPlots
+from Visualization.ExaPlots import StressStrain
 # Note that: pop_stress[gen][ind][expSim][file]
 # first dimension is the selected generation, 
 # second is the selected individual, 
@@ -422,9 +424,9 @@ strain_rate=1e-3
 for k in range(numpy.array(pop_stress).shape[3]):
     S_exp = pop_stress[gen][best_idx][0][k]
     S_sim = pop_stress[gen][best_idx][1][k]
-    plot = ExaPlots.StressStrain(S_exp, S_sim, epsdot = strain_rate)
+    plot = StressStrain(S_exp, S_sim, epsdot = strain_rate)
 
-from visualization.scatter import Scatter
+from Visualization.scatter import Scatter
 plot = Scatter(tight_layout=False)
 plot.add(pop_fit, s=20)
 plot.add(pop_fit[best_idx], s=30, color="red")

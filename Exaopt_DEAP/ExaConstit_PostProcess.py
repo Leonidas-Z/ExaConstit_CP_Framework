@@ -16,11 +16,11 @@ How to run: You can call this function from any script or you can specify the in
 
 # Inputs
 gen = -1
-output = "checkpoint_files/output_gen_1.pkl"
+output = "checkpoint_files/output_gen_15.pkl"
 
 
 
-def ExaPostProcessing(gen=-1, output="checkpoint_files/output_gen_1.pkl"):
+def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
 
     # Retrieve the state of the specified output file
     with open(output,"rb+") as ckp_file:
@@ -48,7 +48,7 @@ def ExaPostProcessing(gen=-1, output="checkpoint_files/output_gen_1.pkl"):
 
 
     # Visualize the results (here we used the visualization module of pymoo extensively)
-    from visualization.ExaPlotLibrary import ExaPlots
+    from Visualization.ExaPlots import StressStrain
     # Note that: pop_stress[gen][ind][expSim][file]
     # first dimension is the selected generation, 
     # second is the selected individual, 
@@ -58,17 +58,17 @@ def ExaPostProcessing(gen=-1, output="checkpoint_files/output_gen_1.pkl"):
     for k in range(numpy.array(pop_stress).shape[3]):
         S_exp = pop_stress[gen][best_idx][0][k]
         S_sim = pop_stress[gen][best_idx][1][k]
-        plot = ExaPlots.StressStrain(S_exp, S_sim, epsdot = strain_rate)
+        plot = StressStrain(S_exp, S_sim, epsdot = strain_rate)
 
 
-    from visualization.scatter import Scatter
+    from Visualization.scatter import Scatter
     plot = Scatter()
     plot.add(pop_fit, s=20)
     plot.add(pop_fit[best_idx], s=30, color="red")
     plot.show()
 
 
-    from visualization.pcp import PCP
+    from Visualization.pcp import PCP
     plot = PCP(tight_layout=False)
     plot.set_axis_style(color="grey", alpha=0.5)
     plot.add(pop_fit, color="grey", alpha=0.3)
@@ -76,7 +76,7 @@ def ExaPostProcessing(gen=-1, output="checkpoint_files/output_gen_1.pkl"):
     plot.show()
 
 
-    from visualization.petal import Petal
+    from Visualization.petal import Petal
     plot = Petal(bounds=[0, 0.05], tight_layout=False)
     plot.add(pop_fit[best_idx])
     plot.show()
@@ -100,4 +100,4 @@ def ExaPostProcessing(gen=-1, output="checkpoint_files/output_gen_1.pkl"):
     plot.show()
     '''
 
-ExaPostProcessing(gen=gen, output=output)
+ExaPostProcessing(output=output, gen=gen)
