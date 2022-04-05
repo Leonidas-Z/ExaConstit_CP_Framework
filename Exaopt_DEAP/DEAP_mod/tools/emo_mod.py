@@ -548,10 +548,7 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     niche_counts[index] = counts
 
     # Choose individuals from all fronts but the last
-    if len(pareto_fronts==1):
-        chosen = list(pareto_fronts)
-    else:
-        chosen = list(chain(*pareto_fronts[:-1]))
+    chosen = list(chain(*pareto_fronts[:-1]))
 
     # Use niching to select the remaining individuals
     sel_count = len(chosen)
@@ -560,9 +557,8 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     chosen.extend(selected)
 
     if return_memory:
-        return sel_count, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
-    return sel_count, chosen
-
+        return n, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
+    return n, chosen
 
 def find_extreme_points(fitnesses, best_point, extreme_points=None):
     'Finds the individuals with extreme values for each objective function.'
