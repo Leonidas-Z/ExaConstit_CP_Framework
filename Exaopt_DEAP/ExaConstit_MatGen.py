@@ -4,10 +4,15 @@ import numpy as np
 
 def Matgen(x_ind, x_dep=None, x_dep_unopt=None ,voce=False, fname='props_cp_mts.txt'):
     
-    ''' If 1 obj function then x_dep should not be used
-    Whether or not you're using voce models
-    x_ind, x_dep, x_dep_unopt, should be lists of parameters. 
-    In extreme cases of only one input parameter, it should also be a list 
+    ''' 
+        There are 3 gategories of parameters that are independent of each other.
+    Please look at the documentation of ExaConstit_NSGA3.py documentation to 
+    understand how they work.
+        Whether or not you're using voce model, x_ind, x_dep, x_dep_unopt, 
+    should be lists of parameters. In extreme cases of only one input parameter,
+    it should also be a list.
+        Material output file name should have the same name as in the toml files
+    so to be able to be read by ExaCosnstit simulation program.
     '''
 
     # File location
