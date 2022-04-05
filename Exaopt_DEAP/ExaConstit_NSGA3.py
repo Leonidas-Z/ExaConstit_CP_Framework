@@ -42,7 +42,7 @@ DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
 # Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperatures, the strain rates etc).
 # If no such parameters, set DEP_UNOPT = None. 
 # How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
-DEP_UNOPT = [[270, 1e-3],[400, 2e-3]]
+DEP_UNOPT = [[270],[300]]
 
 
 # Final Bounds
@@ -60,11 +60,11 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 20
+NGEN = 15
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 p = [50, 0]
-scaling = [1, 0.5]
+scaling = [1, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
 if p[1]!=0 and scaling[1]!=0:
