@@ -552,9 +552,9 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
 
     # Count the dominant solutions
     if len(pareto_fronts)==1:
-        n_non_dominand = k
+        N_non_dom = k
     else:
-        n_non_dominand = len(pareto_fronts[0])
+        N_non_dom = len(pareto_fronts[0])
 
     # Use niching to select the remaining individuals
     sel_count = len(chosen)
@@ -563,8 +563,8 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     chosen.extend(selected)
 
     if return_memory:
-        return n_non_dominand, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
-    return n_non_dominand, chosen
+        return N_non_dom, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
+    return N_non_dom, chosen
 
 def find_extreme_points(fitnesses, best_point, extreme_points=None):
     'Finds the individuals with extreme values for each objective function.'
