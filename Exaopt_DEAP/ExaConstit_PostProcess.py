@@ -39,7 +39,7 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
     pop_fit = numpy.array(pop_fit)
 
     NPOP = pop_fit.shape[0]
-    NONJ = pop_fit.shape[1]
+    NOBJ = pop_fit.shape[1]
 
 
     # Find best solution
