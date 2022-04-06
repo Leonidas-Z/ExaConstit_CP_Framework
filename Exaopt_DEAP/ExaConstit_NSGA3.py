@@ -60,10 +60,10 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 30
+NGEN = 15
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [50, 0]
+p = [20, 0]
 scaling = [1, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
@@ -90,7 +90,7 @@ problem = ExaProb(n_obj=NOBJ,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
-                  ncpus = 20,
+                  ncpus = 3,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
@@ -98,17 +98,22 @@ problem = ExaProb(n_obj=NOBJ,
                   )
 
 # Specify seed (if checkpoint!=None it doesn't matter)
-seed=None
+seed=1
 
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_10.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_15.pkl"
 
+#======================= Stopping criteria parameters ============================
 # Specify how many simulation failures in total to have so to terminate the optimization framework
 fail_limit = 5
-
+# Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
+# Specify the number of generations that the criteria become active
+# Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3P
+stop_limit = 5
+Imin = int(round(NGEN/2))
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -189,14 +194,20 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             pop_fit = ckp["pop_fit"]
             pop_param = ckp["pop_param"]
             pop_stress = ckp["pop_stress"]
-            fail_count = ckp["fail_count"]
             iter_tot = ckp["iter_tot"]
             start_gen = ckp["generation"] + 1
             if start_gen>NGEN: gen = start_gen
+            fail_count = ckp["fail_count"]
+            stop_count = ckp["stop_count"]
+            if not stop_count < stop_limit: 
+                stop_optimization = True
+            else:
+                stop_optimization = False
             logbook1 = ckp["logbook1"]
             logbook2 = ckp["logbook2"]
+       
         except:
-            print("\nERROR: Wrong Checkpoint file")
+            problem.write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
             sys.exit()
 
         # Open log files and erase their contents
@@ -219,8 +230,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Initialize counters and lists
         iter_pgen = 0       # iterations per generation
         iter_tot = 0        # total iterations
-        fail_count = 1
         start_gen = 1       # starting generation
+        fail_count = 0
+        stop_count = 0
+        stop_optimization = False
         pop_fit = []
         pop_param = []
         pop_stress = []
@@ -246,10 +259,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
 
-                while fail_count <= fail_limit:
+                while fail_count < fail_limit:
+                    fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
-                    fail_count+=1
                     # Replace old individual with the new random one with the hope that now the simulation will run normally          
                     ind[:] = toolbox.individual()
                     # Run simulation to find the obj functions
@@ -258,7 +271,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     if problem.is_simulation_done() == 0: 
                         break
                 else:
-                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
+                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
@@ -292,7 +305,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 
     # Begin the generational process
-    for gen in range(start_gen, NGEN+1):
+    gen = start_gen
+    while gen < NGEN+1 and stop_optimization == False:
+    #for gen in range(start_gen, NGEN+1):
           
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
@@ -319,10 +334,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
 
-                while fail_count <= fail_limit:
+                while fail_count < fail_limit:
+                    fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
-                    fail_count+=1
                     # Need 2 different individuals to apply mate and mutate and derive a new individual
                     ind_idx = random.sample(range(0, len_invalid_ind), 2)
                     ind1 = invalid_ind[ind_idx[0]]
@@ -336,7 +351,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     if problem.is_simulation_done() == 0: 
                         break
                 else:
-                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count-1)
+                    text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
                     problem.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
@@ -345,18 +360,13 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
 
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
-        # In selection, random does not follow the rules because in DEAP, NSGAIII niching is using numpy.random() and not random.random() !!!!! 
-        # Please change to random.shuffle
-        NSel, pop = toolbox.select(pop + offspring, NPOP)
-        # How to find Number of non-dominated solutions
-        # Stopping criteria should written here
-        print(NSel)                            
+        # Returns best_front and population after selection
+        best_front, pop = toolbox.select(pop + offspring, NPOP)                  
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
         logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
         logfile1.write("{}\n".format(logbook1.stream))
-
 
         # Write log file and store important data
         pop_fit_gen=[]
@@ -375,18 +385,46 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
 
+
+        # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3P
+        ND = len(best_front)
+        print(ND)
+        if gen > Imin:
+            if ND == NPOP:    
+                stop_count+=1
+                problem.write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
+            else:
+                stop_count=0
+            if not stop_count < stop_limit:
+                stop_optimization = True
+
+
         # Generate a checkpoint and output files (the output file will be independent of DEAP module)
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
             ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot,\
-                generation=gen, fail_count=fail_count, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
+                generation=gen, fail_count=fail_count, stop_count=stop_count, logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
             # Fill the dictionary using the dict(key=value[, ...]) constructor
             out = dict(pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, iter_tot=iter_tot, generation=gen)
             with open("checkpoint_files/output_gen_{}.pkl".format(gen), "wb+") as out_file:
                 pickle.dump(out, out_file)
-    
+
+        # Count gen 
+        gen+=1
+
+    else:
+        if gen >= NGEN+1:
+            text = "INFO: Stopping criteria: Reached the maximum number of generations: GEN = {}!\
+                \nINFO: Framework has finished successfully!".format(gen-1)
+            problem.write_ExaProb_log(text, "info", changeline=True)
+        elif stop_optimization==True:
+            text = "INFO: Stopping criteria: The number of non-dominant solutions is equal to the number of population for {} times consecutively!\
+                \nINFO: Framework has finished successfully!".format(stop_count)
+            problem.write_ExaProb_log(text, "info", changeline=True)
+
+
     logfile1.close()
     logfile2.close()
 
@@ -399,7 +437,7 @@ iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_fre
 
 
 
-
+'''
 
 #================================ Post Processing ===================================
 # Choose which generation you want to show in plots
@@ -409,7 +447,7 @@ pop_fit = numpy.array(pop_fit)
 
 
 # Find best solution
-best_idx=BestSol(pop_fit, weights=[0.5, 0.5], normalize=False).EUDIST()
+best_idx=BestSol(pop_fit, weights=[1, 1], normalize=False).EUDIST()
 
 
 # Visualize the results (here we used the visualization module of pymoo extensively)
@@ -436,3 +474,4 @@ plot = Scatter()
 plot.add(pop_fit, s=20)
 plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
+'''
