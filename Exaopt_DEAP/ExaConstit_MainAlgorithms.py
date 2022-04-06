@@ -10,29 +10,35 @@ from ExaConstit_SolPicker import BestSol
 
 
 
-class ExaAlgorithms:
+class ExaAlgorithms(ExaProb):
 
     def __init__(self,
+                problem,
+                seed,
+                checkpoint,
+                checkpoint_freq,    
                 NOBJ,
                 NPOP,
                 NGEN,
                 BOUND_LOW,
                 BOUND_UP,
-                problem
-                ):
+                **args):
 
         self.NOBJ = NOBJ
         self.NDIM = len(BOUND_LOW)
+        self.BOUND_LOW = BOUND_LOW
+        self.BOUND_UP = BOUND_UP
         self.problem = problem
 
-
-
-    def NSGA3_mult(self, ref_points):
         #====================== Initialize Optimization Strategy ======================
         # Create minimization problem (multiply -1 weights)
         creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
         # Create the Individual class that it has also the fitness (obj function results) as a list
         creator.create("Individual", list, fitness=creator.FitnessMin, stress=None)
+
+
+    def NSGA3_main(self, ref_points, **args):
+
 
 
         #=========================== Initialize Population ============================
@@ -47,8 +53,8 @@ class ExaAlgorithms:
 
         #### Population generator
         toolbox = base.Toolbox()
-        # Register the above individual generator method in the toolbox class. That is attr_float with arguments low=BOUND_LOW, up=BOUND_UP, size=NDIM
-        toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+        # Register the above individual generator method in the toolbox class. That is attr_float with arguments low=self.BOUND_LOW, up=self.BOUND_UP, size=NDIM
+        toolbox.register("attr_float", uniform, self.BOUND_LOW, self.BOUND_UP, self.NDIM)
         # Function that produces a complete individual with NDIM number of genes that have Low and Up bounds
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         # Function that instatly produces MU individuals (population). We assign the attribute number_of_population at the main function in this problem
@@ -58,18 +64,18 @@ class ExaAlgorithms:
         #=========================== Initialize GA Operators ============================
         #### Evolution Methods
         # Function that returns the objective functions values as a dictionary (if n_obj=3 it will evaluate the obj function 3 times and will return 3 values (str) - It runs the problem.evaluate for n_obj times)
-        toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
+        toolbox.register("evaluate", self.problem.evaluate)   # Evaluate obj functions
         # Crossover function using the cxSimulatedBinaryBounded method
-        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.BOUND_LOW, up=self.BOUND_UP, eta=30.0)
         # Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fitution much more different.
-        toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+        toolbox.register("mutate", tools.mutPolynomialBounded, low=self.BOUND_LOW, up=self.BOUND_UP, eta=20.0, indpb=1.0/self.NDIM)
         # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
         toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
 
         
         #================================ Evolution Algorithm ===========================
         # Start NSGA algorithm
-        iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
+        iter_tot, pop_fit, pop_param, pop_stress = main(self.seed, self.checkpoint, self.checkpoint_freq)
 
         # Here we construct our main algorithm NSGAIII
         def main(seed=None, checkpoint=None, checkpoint_freq=1):
@@ -149,7 +155,7 @@ class ExaAlgorithms:
                     iter_pgen+=1
                     iter_tot+=1
         #_______________________________________________________________________________________________
-                    while problem.is_simulation_done() != 0 and break_count <= break_limit:
+                    while self.problem.is_simulation_done() != 0 and break_count <= break_limit:
 
                         ind1 = invalid_ind[random.randrange(NPOP)]
                         ind2 = invalid_ind[random.randrange(NPOP)]
@@ -157,17 +163,17 @@ class ExaAlgorithms:
                         new_ind = toolbox.mutate(new_ind)[0]
                         
                         text="Attempt to find another Parameter set to converge, break_count = {}\n\n".format(break_count)
-                        problem.write_ExaProb_log(text, "warning", changeline=False)
+                        self.problem.write_ExaProb_log(text, "warning", changeline=False)
                         fit = toolbox.evaluate(new_ind) 
 
                         break_count+=1
                         if break_count > break_limit: 
                             text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(break_count-1)
-                            problem.write_ExaProb_log(text, "error", changeline=True)
+                            self.problem.write_ExaProb_log(text, "error", changeline=True)
                             sys.exit()
         #_______________________________________________________________________________________________
                     ind.fitness.values = fit
-                    ind.stress = problem.return_stress()
+                    ind.stress = self.problem.return_stress()
 
                 # Write log statistics about the new population
                 logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
