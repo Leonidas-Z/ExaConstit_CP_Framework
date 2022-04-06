@@ -108,12 +108,12 @@ checkpoint= None #"checkpoint_files/checkpoint_gen_15.pkl"
 
 #======================= Stopping criteria parameters ============================
 # Specify how many simulation failures in total to have so to terminate the optimization framework
-fail_limit = 5
-# Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
-# Specify the number of generations that the criteria become active
+max_fail_count = 5
+# Specify the number of generations that the criteria should become active
+# Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal so to stop the framework
 # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3P
-stop_limit = 5
 Imin = int(round(NGEN/2))
+max_stop_count = 5
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -199,7 +199,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             if start_gen>NGEN: gen = start_gen
             fail_count = ckp["fail_count"]
             stop_count = ckp["stop_count"]
-            if not stop_count < stop_limit: 
+            if not stop_count < max_stop_count: 
                 stop_optimization = True
             else:
                 stop_optimization = False
@@ -259,7 +259,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
 
-                while fail_count < fail_limit:
+                while fail_count < max_fail_count:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
@@ -334,7 +334,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
 
-                while fail_count < fail_limit:
+                while fail_count < max_fail_count:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
                     problem.write_ExaProb_log(text, "warning", changeline=False)
@@ -395,7 +395,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 problem.write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
             else:
                 stop_count=0
-            if not stop_count < stop_limit:
+            if not stop_count < max_stop_count:
                 stop_optimization = True
 
 
@@ -437,8 +437,6 @@ iter_tot, pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_fre
 
 
 
-'''
-
 #================================ Post Processing ===================================
 # Choose which generation you want to show in plots
 gen = -1 # here we chose the last gen (best)
@@ -474,4 +472,3 @@ plot = Scatter()
 plot.add(pop_fit, s=20)
 plot.add(pop_fit[best_idx], s=30, color="red")
 plot.show()
-'''
