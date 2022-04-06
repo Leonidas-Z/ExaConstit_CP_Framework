@@ -82,7 +82,8 @@ class ExaProb:
             self.S_exp.append(S_exp)
 
             if n_steps[k] != len(S_exp):
-                self.write_ExaProb_log("The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k))
+                print(15)
+                self.write_ExaProb_log("The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
 
@@ -116,7 +117,7 @@ class ExaProb:
 
         # Count iterations and save solutions
         self.eval_cycle += 1
-        self.write_ExaProb_log("INFO: Evaluation Cycle: {}".format(self.eval_cycle), type = 'info')
+        self.write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), type = 'info')
         self.write_ExaProb_log("\tSolution: x = {}".format(x_group))
 
         # Initialize
@@ -239,6 +240,7 @@ class ExaProb:
             print('WARNING: '+text)
         elif type =='info':
             self.logger.info(text)
+            print(text)
         elif type == 'debug':
             self.logger.debug(text)
 

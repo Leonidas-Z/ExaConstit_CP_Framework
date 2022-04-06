@@ -550,21 +550,22 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     # Choose individuals from all fronts but the last
     chosen = list(chain(*pareto_fronts[:-1]))
 
-    # Count the dominant solutions
-    if len(pareto_fronts)==1:
-        N_non_dom = k
-    else:
-        N_non_dom = len(pareto_fronts[0])
-
     # Use niching to select the remaining individuals
     sel_count = len(chosen)
     n = k - sel_count
     selected = niching(pareto_fronts[-1], n, niches[sel_count:], dist[sel_count:], niche_counts)
     chosen.extend(selected)
 
+    # If 1 pareto front then best_front is the chosen
+    # If more that 1 pareto fronts then the first pareto (rank1) is the best one
+    if len(pareto_fronts)==1:
+        best_front = chosen
+    else:
+        best_front = pareto_fronts[0]
+
     if return_memory:
-        return N_non_dom, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
-    return N_non_dom, chosen
+        return best_front, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
+    return best_front, chosen
 
 def find_extreme_points(fitnesses, best_point, extreme_points=None):
     'Finds the individuals with extreme values for each objective function.'
