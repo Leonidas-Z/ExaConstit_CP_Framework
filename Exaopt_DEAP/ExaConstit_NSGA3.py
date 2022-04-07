@@ -382,7 +382,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Average Eucledean distance of the non-dominated soultions (best_front)
         # Here, optimum point will be the the origin [0,0,...,0]
         # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3P
-        # Since this is a minimization problem, it is expected to decrease over generations
+        # Since this is a minimization problem, it is expected to decrease over generations but not always
         Di = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
 
 #_______________________________________________________________________________________________
