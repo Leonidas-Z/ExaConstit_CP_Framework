@@ -6,6 +6,7 @@ import pickle
 import sys
 
 from ExaConstit_Problems import ExaProb
+from ExaConstit_Logger import Logger
 from ExaConstit_SolPicker import BestSol
 
 
@@ -210,7 +211,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             logbook2 = ckp["logbook2"]
        
         except:
-            problem.write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
+            Logger.write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
             sys.exit()
 
         # Open log files and erase their contents
@@ -267,7 +268,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count < fail_limit:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                    problem.write_ExaProb_log(text, "warning", changeline=False)
+                    Logger.write_ExaProb_log(text, "warning", changeline=False)
                     # Replace old individual with the new random one with the hope that now the simulation will run normally          
                     ind[:] = toolbox.individual()
                     # Run simulation to find the obj functions
@@ -277,7 +278,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                         break
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
-                    problem.write_ExaProb_log(text, "error", changeline=True)
+                    Logger.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
             ind.fitness.values = fit
@@ -287,7 +288,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Write log statistics about the new population
         logbook1.header = "gen", "iter", "simRuns", "ND", "ND_dist_avg", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND="None", ND_dist_avg="None", **record)
+        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=0, ND_dist_avg="None", **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
         # Write log file and store important data
@@ -342,7 +343,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count < fail_limit:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                    problem.write_ExaProb_log(text, "warning", changeline=False)
+                    Logger.write_ExaProb_log(text, "warning", changeline=False)
                     # Need 2 different individuals to apply mate and mutate and derive a new individual
                     ind_idx = random.sample(range(0, len_invalid_ind), 2)
                     ind1 = invalid_ind[ind_idx[0]]
@@ -357,7 +358,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                         break
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
-                    problem.write_ExaProb_log(text, "error", changeline=True)
+                    Logger.write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
             ind.fitness.values = fit
@@ -390,7 +391,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         if gen > Imin:
             if ND == NPOP:    
                 stop_count+=1
-                problem.write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
+                Logger.write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
             else:
                 stop_count=0
             if not stop_count < stop_limit:
@@ -445,11 +446,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         if gen >= NGEN+1:
             text = "INFO: Stopping criteria: Reached the maximum number of generations: GEN = {}!\
                 \nINFO: Framework has finished successfully!".format(gen-1)
-            problem.write_ExaProb_log(text, "info", changeline=True)
+            Logger.write_ExaProb_log(text, "info", changeline=True)
         elif stop_optimization==True:
             text = "INFO: Stopping criteria: The number of non-dominant solutions is equal to the number of population for {} times consecutively!\
                 \nINFO: Framework has finished successfully!".format(stop_count)
-            problem.write_ExaProb_log(text, "info", changeline=True)
+            Logger.write_ExaProb_log(text, "info", changeline=True)
 
 
     logfile1.close()
