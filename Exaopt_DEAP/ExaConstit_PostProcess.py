@@ -16,7 +16,7 @@ How to run: You can call this function from any script or you can specify the in
 
 # Inputs
 gen = -1
-output = "checkpoint_files/output_gen_15.pkl"
+output = "checkpoint_files/output_gen_2.pkl"
 
 
 
@@ -29,22 +29,25 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
     pop_fit = ckp["pop_fit"]
     pop_param = ckp["pop_param"]
     pop_stress = ckp["pop_stress"]
+    best_front_fit = ckp["best_front_fit"]
+    best_front_param = ckp["best_front_param"]
     iter_tot = ckp["iter_tot"]
     last_gen = ckp["generation"]
 
 
     # ================================ Post Processing ===================================
     # Choose which generation you want to show in plots
-    pop_fit = pop_fit[gen]  
+    #pop_fit = pop_fit[gen]  
     pop_fit = numpy.array(pop_fit)
 
-    NPOP = pop_fit.shape[0]
-    NONJ = pop_fit.shape[1]
+    NGEN = pop_fit.shape[0]
+    NPOP = pop_fit.shape[1]
+    NOBJ = pop_fit.shape[2]
 
 
     # Find best solution
     from ExaConstit_SolPicker import BestSol
-    best_idx=BestSol(pop_fit, weights=[1, 1], normalize=False).EUDIST()
+    best_idx = BestSol(pop_fit[gen], weights=[1, 1]).EUDIST()
 
 
     # Visualize the results (here we used the visualization module of pymoo extensively)
@@ -63,28 +66,29 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
 
     from Visualization.scatter import Scatter
     plot = Scatter()
-    plot.add(pop_fit, s=20)
-    plot.add(pop_fit[best_idx], s=30, color="red")
+    plot.add(pop_fit[gen], s=20)
+    plot.add(best_front_fit[gen], s=20, color="orange")
+    plot.add(pop_fit[gen][best_idx], s=30, color="red")
     plot.show()
 
 
     from Visualization.pcp import PCP
     plot = PCP(tight_layout=False)
     plot.set_axis_style(color="grey", alpha=0.5)
-    plot.add(pop_fit, color="grey", alpha=0.3)
-    plot.add(pop_fit[best_idx], linewidth=2, color="red")
+    plot.add(pop_fit[gen], color="grey", alpha=0.3)
+    plot.add(pop_fit[gen][best_idx], linewidth=2, color="red")
     plot.show()
 
 
     from Visualization.petal import Petal
     plot = Petal(bounds=[0, 0.05], tight_layout=False)
-    plot.add(pop_fit[best_idx])
+    plot.add(pop_fit[gen][best_idx])
     plot.show()
     #Put out of comments if we want to see all the individual fitnesses and not only the best
     plot = Petal(bounds=[0, 0.05], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
     for k in range(1,NPOP+1):
         if k%4==0:
-            plot.add(pop_fit[k-4:k])
+            plot.add(pop_fit[gen][k-4:k])
     plot.show()
 
     '''
