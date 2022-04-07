@@ -285,9 +285,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
 
         # Write log statistics about the new population
-        logbook1.header = "gen", "iter", "simRuns", "ND_dist", "std", "min", "avg", "max"
+        logbook1.header = "gen", "iter", "simRuns", "ND_dist_avg", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND_dist="None", **record)
+        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND_dist_avg="None", **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
         # Write log file and store important data
@@ -399,7 +399,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND_dist=Di, **record)
+        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND_dist_avg=Di, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
         # Store population data and write logs
