@@ -16,7 +16,7 @@ How to run: You can call this function from any script or you can specify the in
 
 #========================= Inputs ==============================
 gen = -1
-output = "checkpoint_files/output_gen_4.pkl"
+output = "checkpoint_files/output_gen_6.pkl"
 
 
 
@@ -29,8 +29,6 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
         ckp = pickle.load(ckp_file)
 
     pop_fit = ckp["pop_fit"]
-    pop_fit = numpy.array(pop_fit)
-
     pop_param = ckp["pop_param"]
     pop_stress = ckp["pop_stress"]
     best_front_fit = ckp["best_front_fit"]
@@ -38,6 +36,8 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
     iter_tot = ckp["iter_tot"]
     last_gen = ckp["generation"]
 
+    # Make data numpy type (best_front has different size per generation, thus it is not so simple)
+    pop_fit = numpy.array(pop_fit)
 
     # Retrieve some more info
     NGEN = pop_fit.shape[0]
@@ -67,7 +67,7 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
     from Visualization.scatter import Scatter
     plot = Scatter()
     plot.add(pop_fit[gen], s=20)
-    plot.add(best_front_fit[gen], s=20, color="orange")
+    plot.add(numpy.array(best_front_fit[gen]), s=20, color="orange")
     plot.add(pop_fit[gen][best_idx], s=30, color="red")
     plot.show()
 
