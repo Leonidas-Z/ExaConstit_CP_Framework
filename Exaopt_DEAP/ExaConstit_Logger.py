@@ -1,21 +1,13 @@
 import logging
-from msilib.schema import Error
+
 
 
 class Logger:
     
-    def __init__(self, loglevel = "DEBUG"):
+    def __init__(self):
 
-        if loglevel == "DEBUG":
-            loglevel = logging.DEBUG
-        elif loglevel == "INFO":
-            level = logging.INFO
-        elif loglevel == "WARNING":
-            level = logging.WARNING        
-        elif loglevel == "ERROR":
-            level = logging.ERROR
-        else:
-            raise Exception("Wrong loglevel input argument in Logger")
+        # choose the level of the logger:
+        level = logging.DEBUG
 
         # Make log file to track the runs. This file will be created after the code starts to run.
         logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
