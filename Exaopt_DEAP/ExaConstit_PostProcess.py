@@ -14,12 +14,14 @@ How to run: You can call this function from any script or you can specify the in
 '''
 
 
-# Inputs
+#========================= Inputs ==============================
 gen = -1
-output = "checkpoint_files/output_gen_2.pkl"
+output = "checkpoint_files/output_gen_4.pkl"
 
 
 
+
+#====================== Post Processing ========================
 def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
 
     # Retrieve the state of the specified output file
@@ -27,6 +29,8 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
         ckp = pickle.load(ckp_file)
 
     pop_fit = ckp["pop_fit"]
+    pop_fit = numpy.array(pop_fit)
+
     pop_param = ckp["pop_param"]
     pop_stress = ckp["pop_stress"]
     best_front_fit = ckp["best_front_fit"]
@@ -35,11 +39,7 @@ def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
     last_gen = ckp["generation"]
 
 
-    # ================================ Post Processing ===================================
-    # Choose which generation you want to show in plots
-    #pop_fit = pop_fit[gen]  
-    pop_fit = numpy.array(pop_fit)
-
+    # Retrieve some more info
     NGEN = pop_fit.shape[0]
     NPOP = pop_fit.shape[1]
     NOBJ = pop_fit.shape[2]
