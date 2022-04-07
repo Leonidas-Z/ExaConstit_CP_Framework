@@ -2,7 +2,6 @@ import numpy as np
 import os
 import os.path
 import subprocess
-import logging
 import sys
 from ExaConstit_MatGen import Matgen
 from ExaConstit_Logger import Logger
