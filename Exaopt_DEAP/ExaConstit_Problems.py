@@ -47,10 +47,6 @@ class ExaProb:
         self.runs = 0
         self.mult_GA = mult_GA
 
-        # Make log file to track the runs. This file will be created after the code starts to run.
-        level = logging.DEBUG
-        logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
-        self.logger = logging.getLogger()
 
         # Check if we have as many files as the objective functions
         for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files", "DEP_UNOPT"]):
