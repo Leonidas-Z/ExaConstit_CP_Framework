@@ -107,12 +107,13 @@ checkpoint_freq = 1
 # Specify checkpoint file or set None if you want to start from the beginning
 checkpoint= None #"checkpoint_files/checkpoint_gen_5.pkl"
 
+
 #======================= Stopping criteria parameters ============================
 # Specify how many simulation failures in total to have so to terminate the optimization framework
 fail_limit = 5
 # Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
 # Specify the threshold number of generations so that after this generation, the criteria becomes active
-# Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3P
+# Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
 stop_limit = 5
 Imin = int(round(NGEN/2))
 
@@ -381,13 +382,13 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Average Eucledean distance of the non-dominated soultions (best_front)
         # Here, optimum point will be the the origin [0,0,...,0]
-        # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3P
+        # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
         # Since this is a minimization problem, it is expected to decrease over generations but not always
         Di = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
 
 #_______________________________________________________________________________________________
 
-        # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3P
+        # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
         if gen > Imin:
             if ND == NPOP:    
                 stop_count+=1
