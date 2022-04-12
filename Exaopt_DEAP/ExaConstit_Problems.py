@@ -113,7 +113,7 @@ class ExaProb:
 
         # Count iterations and save solutions
         self.eval_cycle += 1
-        Logger.write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), type = 'info')
+        Logger.write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), 'info')
         Logger.write_ExaProb_log("\tSolution: x = {}".format(x_group))
 
         # Initialize
