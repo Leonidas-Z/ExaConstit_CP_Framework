@@ -3,7 +3,7 @@ import sys
 
 
 
-def initialize_ExaProb_log(glob_loglvl='debug'):
+def initialize_ExaProb_log(glob_loglvl='debug', filename='logbook_ExaProb.log'):
     global logger
     
     if glob_loglvl=='error':
@@ -16,7 +16,7 @@ def initialize_ExaProb_log(glob_loglvl='debug'):
         level = logging.DEBUG
 
     # Make log file to track the runs. This file will be created after the code starts to run.
-    logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
+    logging.basicConfig(filename=filename, level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
     logger = logging.getLogger()
 
 
