@@ -4,9 +4,10 @@ import random
 from math import factorial
 import pickle
 import sys
+import logging
 
 from ExaConstit_Problems import ExaProb
-from ExaConstit_Logger import Logger
+from ExaConstit_Logger import initialize_ExaProb_log, write_ExaProb_log
 from ExaConstit_SolPicker import BestSol
 
 
@@ -85,18 +86,22 @@ NPOP = int(H + (4 - H % 4))
 CXPB = 1.0
 MUTPB = 1.0
 
+
+# Initialize NSGA3 and ExaProb logger and specify log level (threshold):
+initialize_ExaProb_log(glob_loglvl='debug')
+
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
                   mult_GA=True,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
-                  ncpus = 20,
+                  ncpus = 2,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
-                  Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'],
-                  )
+                  Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'])   
+
 
 # Specify seed (if checkpoint!=None it doesn't matter)
 seed=1
@@ -212,7 +217,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             logbook2 = ckp["logbook2"]
        
         except:
-            Logger.write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
+            write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
             sys.exit()
 
         # Open log files and erase their contents
@@ -269,7 +274,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count < fail_limit:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                    Logger.write_ExaProb_log(text, "warning", changeline=False)
+                    write_ExaProb_log(text, "warning", changeline=False)
                     # Replace old individual with the new random one with the hope that now the simulation will run normally          
                     ind[:] = toolbox.individual()
                     # Run simulation to find the obj functions
@@ -279,7 +284,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                         break
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
-                    Logger.write_ExaProb_log(text, "error", changeline=True)
+                    write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
             ind.fitness.values = fit
@@ -344,7 +349,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 while fail_count < fail_limit:
                     fail_count+=1
                     text="Attempt to find another Parameter set to converge, fail_count = {}\n\n".format(fail_count)
-                    Logger.write_ExaProb_log(text, "warning", changeline=False)
+                    write_ExaProb_log(text, "warning", changeline=False)
                     # Need 2 different individuals to apply mate and mutate and derive a new individual
                     ind_idx = random.sample(range(0, len_invalid_ind), 2)
                     ind1 = invalid_ind[ind_idx[0]]
@@ -359,7 +364,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                         break
                 else:
                     text = "The evaluation failed for a total of {} attempts! Framework will terminate!".format(fail_count)
-                    Logger.write_ExaProb_log(text, "error", changeline=True)
+                    write_ExaProb_log(text, "error", changeline=True)
                     sys.exit()
 
             ind.fitness.values = fit
@@ -392,7 +397,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         if gen > Imin:
             if ND == NPOP:    
                 stop_count+=1
-                Logger.write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
+                write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
             else:
                 stop_count=0
             if not stop_count < stop_limit:
@@ -447,11 +452,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         if gen >= NGEN+1:
             text = "INFO: Stopping criteria: Reached the maximum number of generations: GEN = {}!\
                 \nINFO: Framework has finished successfully!".format(gen-1)
-            Logger.write_ExaProb_log(text, "info", changeline=True)
+            write_ExaProb_log(text, "info", changeline=True)
         elif stop_optimization==True:
             text = "INFO: Stopping criteria: The number of non-dominant solutions is equal to the number of population for {} times consecutively!\
                 \nINFO: Framework has finished successfully!".format(stop_count)
-            Logger.write_ExaProb_log(text, "info", changeline=True)
+            write_ExaProb_log(text, "info", changeline=True)
 
 
     logfile1.close()
