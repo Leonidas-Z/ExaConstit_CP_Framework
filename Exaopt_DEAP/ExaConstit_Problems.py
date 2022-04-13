@@ -4,7 +4,8 @@ import os.path
 import subprocess
 import sys
 from ExaConstit_MatGen import Matgen
-from ExaConstit_Logger import Logger
+from ExaConstit_Logger import write_ExaProb_log
+
 
 
 class ExaProb:
@@ -50,16 +51,16 @@ class ExaProb:
         # Check if we have as many files as the objective functions
         for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files", "DEP_UNOPT"]):
             if len(data) != n_obj and mult_GA==True:
-                Logger.write_ExaProb_log('The length of "{}" is not equal to NOBJ={}'.format(name, n_obj), type = 'error', changeline = True)
+                write_ExaProb_log('The length of "{}" is not equal to NOBJ={}'.format(name, n_obj), type = 'error', changeline = True)
                 sys.exit()
 
             if len(data) != len(Exper_input_files) and mult_GA == False:
-                Logger.write_ExaProb_log('The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)), 'error', changeline = True)
+                write_ExaProb_log('The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)), type ='error', changeline = True)
                 sys.exit()
         
         # if multi-objective scheme, we should have more that 2 objectives
         if n_obj<2 and mult_GA == True:
-            Logger.write_ExaProb_log('NOBJ={} when mult_obj=True'.format(n_obj), type = 'error', changeline = True)
+            write_ExaProb_log('NOBJ={} when mult_obj=True'.format(n_obj), type = 'error', changeline = True)
             sys.exit()
 
         # Read Experiment data sets and save to S_exp
@@ -69,7 +70,7 @@ class ExaProb:
             try:
                 S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float', ndmin=2)
             except:
-                Logger.write_ExaProb_log("Exper_input_files[{k}] was not found!".format(k=k), type = 'error', changeline = True)
+                write_ExaProb_log("Exper_input_files[{k}] was not found!".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
             # Assuming that each experment data file has only a stress column
@@ -78,8 +79,7 @@ class ExaProb:
             self.S_exp.append(S_exp)
 
             if n_steps[k] != len(S_exp):
-                print(15)
-                Logger.write_ExaProb_log("The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
+                write_ExaProb_log("The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
 
@@ -113,8 +113,8 @@ class ExaProb:
 
         # Count iterations and save solutions
         self.eval_cycle += 1
-        Logger.write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), type = 'info')
-        Logger.write_ExaProb_log("\tSolution: x = {}".format(x_group))
+        write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), 'info')
+        write_ExaProb_log("\tSolution: x = {}".format(x_group))
 
         # Initialize
         self.S_sim = []
@@ -147,12 +147,12 @@ class ExaProb:
                         Matgen(x_ind=x_group[0])
             except:
                 text = 'Unable to generate material properties using Matgen!'
-                Logger.write_ExaProb_log(text, 'error', changeline = True)
+                write_ExaProb_log(text, 'error', changeline = True)
                 sys.exit()
 
 
             # Call ExaConstit to run the CP simulation
-            Logger.write_ExaProb_log('\tWaiting ExaConstit for file %s ......' % self.Exper_input_files[k])
+            write_ExaProb_log('\tWaiting ExaConstit for file %s ......' % self.Exper_input_files[k])
             
             init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
@@ -174,11 +174,11 @@ class ExaProb:
                 
                 if status == 0 and no_sim_data == no_exp_data:
                     self.flag = 0  # successful
-                    Logger.write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
+                    write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
                 elif no_sim_data < no_exp_data:  
                     self.flag = 1  # partially successful
                     text = 'Simulation has unconverged results for eval_cycle = {}: no_sim_data = {} < no_exp_data = {}'.format(self.eval_cycle, no_sim_data, no_exp_data)
-                    Logger.write_ExaProb_log(text, 'warning', changeline = True)
+                    write_ExaProb_log(text, 'warning', changeline = True)
                     self.eval_cycle = self.eval_cycle-1
                     return
                 # S_sim will be a list that contains a numpy array of stress corresponding to each file
@@ -187,7 +187,7 @@ class ExaProb:
             else:
                 self.flag = 2
                 text = 'Simulation did not run for eval_cycle = {}. The output file was empty or not existent!'.format(self.eval_cycle)
-                Logger.write_ExaProb_log(text, 'warning', changeline = True)
+                write_ExaProb_log(text, 'warning', changeline = True)
                 self.eval_cycle = self.eval_cycle-1
                 return
 
@@ -197,17 +197,17 @@ class ExaProb:
             S_sim_abs = abs(self.S_sim[k])
             
             f[k] = np.sqrt(sum((S_sim_abs-S_exp_abs)**2)/sum(S_exp_abs**2))
-            Logger.write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[k]))
+            write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[k]))
                
         # If use a simple GA scheme then return the summation of all the objective functions
         # If use a multiple_objective GA scheme then return individual objective functions
         if self.mult_GA == False:
             F = sum(f)
-            Logger.write_ExaProb_log('\tGlobal obj function: fit = '+str(F))
+            write_ExaProb_log('\tGlobal obj function: fit = '+str(F))
         else:
             F = f
 
-        Logger.write_ExaProb_log('')
+        write_ExaProb_log('')
 
         return F
 

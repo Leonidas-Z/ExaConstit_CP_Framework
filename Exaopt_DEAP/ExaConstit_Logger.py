@@ -1,36 +1,43 @@
 import logging
+import sys
 
 
 
-class Logger:
+def initialize_ExaProb_log(glob_loglvl='debug'):
+    global logger
     
-    def __init__(self):
-
-        # choose the level of the logger:
+    if glob_loglvl=='error':
+        level = logging.ERROR
+    if glob_loglvl=='warning':
+        level = logging.WARNING
+    if glob_loglvl=='info':
+        level = logging.INFO
+    if glob_loglvl=='debug':
         level = logging.DEBUG
 
-        # Make log file to track the runs. This file will be created after the code starts to run.
-        logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
-        self.logger = logging.getLogger()
+    # Make log file to track the runs. This file will be created after the code starts to run.
+    logging.basicConfig(filename='logbook3_ExaProb.log', level=level, format='%(message)s', datefmt='%m/%d/%Y %H:%M:%S ', filemode='w')
+    logger = logging.getLogger()
 
 
 
-    def write_ExaProb_log(self, text, type='debug', changeline=False):
-       
-        if changeline == True:
-            self.logger.info('\n')
-            print('\n')
+def write_ExaProb_log(text, type='debug', changeline=False):
 
-        if type=='error':
-            self.logger.error('ERROR: '+text)
-            print('ERROR: '+text)
-        elif type =='warning':
-            self.logger.warning('WARNING: '+text)
-            print('WARNING: '+text)
-        elif type =='info':
-            self.logger.info(text)
-            print(text)
-        elif type == 'debug':
-            self.logger.debug(text)
-        else:
-            raise Exception("Wrong type input argument in Logger")
+    try: logger
+    except:
+        sys.exit('You did not initialize ExaConstit_Logger.py')
+
+    if changeline == True:
+        logger.info('\n')
+        print('\n')
+    if type=='error':
+        logger.error('ERROR: '+text)
+        print('ERROR: '+text)
+    elif type =='warning':
+        logger.warning('WARNING: '+text)
+        print('WARNING: '+text)
+    elif type =='info':
+        logger.info(text)
+        print(text)
+    elif type == 'debug':
+        logger.debug(text)
