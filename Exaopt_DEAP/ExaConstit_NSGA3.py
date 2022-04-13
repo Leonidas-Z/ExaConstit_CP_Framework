@@ -88,7 +88,7 @@ MUTPB = 1.0
 
 
 # Initialize NSGA3 and ExaProb logger and specify log level (threshold):
-initialize_ExaProb_log(glob_loglvl='debug')
+initialize_ExaProb_log(glob_loglvl='debug', filename='logbook3_ExaProb.log')
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
