@@ -1,4 +1,5 @@
 from DEAP_mod import creator, base, tools, algorithms
+from DEAP_mod.benchmarks.tools import hypervolume, convergence, diversity
 import numpy
 import random
 from math import factorial
@@ -62,10 +63,10 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 20
+NGEN = 1
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [50, 0]
+p = [3, 0]
 scaling = [1, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
@@ -80,7 +81,7 @@ P = sum(p)
 H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
 
 # Population number (NSGAIII paper)
-NPOP = int(H + (4 - H % 4))
+NPOP = 4#int(H + (4 - H % 4))
 
 # GA operator related parameters
 CXPB = 1.0
@@ -110,7 +111,7 @@ seed=1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_5.pkl"
+checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -292,9 +293,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
 
         # Write log statistics about the new population
-        logbook1.header = "gen", "iter", "simRuns", "ND", "ND_dist_avg", "std", "min", "avg", "max"
+        logbook1.header = "gen", "iter", "runs", "ND", "GD", "HV", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=0, ND_dist_avg="None", **record)
+        logbook1.record(gen=0, iter=iter_pgen, runs=iter_pgen*NOBJ, ND=0, GD="None    ", HV="None    ", **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
         # Write log file and store important data
@@ -389,8 +390,14 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Here, optimum point will be the the origin [0,0,...,0]
         # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
         # Since this is a minimization problem, it is expected to decrease over generations but not always
-        Di = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
-
+        GD = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
+        # Calculate hypervolume
+        HV = hypervolume(best_front, [1, 1])
+        print(HV)
+        # Convergence
+        #CV = convergence(pop[gen-1], pop[gen])
+        #print(CV)
+        # make everything deap compatible
 #_______________________________________________________________________________________________
 
         # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
@@ -406,7 +413,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, ND_dist_avg=Di, **record)
+        logbook1.record(gen=gen, iter=iter_pgen, runs=iter_pgen*NOBJ, ND=ND, GD=GD, HV=HV, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
         # Store population data and write logs
