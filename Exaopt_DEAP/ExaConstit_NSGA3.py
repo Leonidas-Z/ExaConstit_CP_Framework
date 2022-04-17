@@ -1,4 +1,5 @@
 from DEAP_mod import creator, base, tools, algorithms
+from DEAP_mod.benchmarks.tools import hypervolume, convergence, diversity
 import numpy
 import random
 from math import factorial
@@ -28,6 +29,9 @@ Also please look at the associated paper for the NSGAIII
 
 
 #============================== Input Parameters ================================
+# Choos if we want to run the framework with U-NSGA-III
+UNSGA3=True
+
 # Problem Parameters
 # Number of obj functions
 NOBJ = 2
@@ -56,16 +60,17 @@ if (DEP_LOW != None) and (DEP_UP != None):
         BOUND_UP.extend(DEP_UP)
     n_dep = len(DEP_LOW)
 else:
-    n_dep = None # no dependent parameters
+    # no dependent parameters
+    n_dep = None 
 
 # Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 20
+NGEN = 50
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [50, 0]
+p = [30, 0]
 scaling = [1, 0]
 
 ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
@@ -96,7 +101,7 @@ problem = ExaProb(n_obj=NOBJ,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
-                  ncpus = 2,
+                  ncpus = 20,
                   #loc_mechanics_bin ="",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
                   Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
@@ -110,7 +115,7 @@ seed=1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_5.pkl"
+checkpoint= None#"checkpoint_files/checkpoint_gen_2.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -137,7 +142,7 @@ print("Expected Total Simulation Runs = {}\n".format(NPOP*NOBJ*NGEN))
 # Create minimization problem (multiply -1 weights)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 # Create the Individual class that it has also the fitness (obj function results) as a list
-creator.create("Individual", list, fitness=creator.FitnessMin, stress=None)
+creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, nich=None, nich_dist=None, stress=None)
 
 
 
@@ -262,11 +267,12 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
 
+#_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
-#_______________________________________________________________________________________________
+
             # If simulation failed due to parameters, generate a new individual and run simulation with the new one
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
@@ -292,9 +298,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
 
         # Write log statistics about the new population
-        logbook1.header = "gen", "iter", "simRuns", "ND", "ND_dist_avg", "std", "min", "avg", "max"
+        logbook1.header = "gen", "iter", "simRuns", "ND", "GD", "HV", "std", "min", "avg", "max"
         record = stats1.compile(pop)
-        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=0, ND_dist_avg="None", **record)
+        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND="None ", GD="None    ", HV="None    ", **record)
         logfile1.write("{}\n".format(logbook1.stream))
         
         # Write log file and store important data
@@ -319,16 +325,19 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     # Begin the generational process
     gen = start_gen
     while gen < NGEN+1 and stop_optimization == False:
-    #for gen in range(start_gen, NGEN+1):
-          
+        
+        write_ExaProb_log("Geneartion: {}".format(gen), "info", True)
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
 
-        # Produce offsprings
+        # If UNSGA3 == True then we apply the UNSGA3 niching to the population 
+        # Look at the corresponding paper
+        if UNSGA3 == True:
+            pop = tools.emo_mod.niching_selection_UNSGA3(pop)
         # varAnd does the previously registered crossover and mutation methods. 
         # Produces the offsprings and deletes their previous fitness values
-        offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)    
-                   
+        offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)   
+        
         # Evaluate the individuals that their fitness has not been evaluated
         # Returns the invalid_ind (in each row, returns the genes of each invalid_ind). 
         # Invalid_ind are those which their fitness value has not been calculated 
@@ -336,12 +345,13 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]     
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)                
 
+#_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         iter_pgen = 0 
         for ind, fit in zip(invalid_ind, fitness_eval):            
             iter_pgen+=1
             iter_tot+=1
-#_______________________________________________________________________________________________
+
             # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
@@ -373,15 +383,18 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # Returns optimal front and population after selection
-        best_front, pop = toolbox.select(pop + offspring, NPOP)                  
+        pop = toolbox.select(pop + offspring, NPOP)
 
-        # Store best_front data
+
+        best_front=[]
         best_front_param_gen =[]
-        best_front_fit_gen =[]
-        for ind_nd in best_front:
-            best_front_fit_gen.append(ind_nd.fitness.values)
-            best_front_param_gen.append(tuple(ind_nd))
-        
+        best_front_fit_gen =[]                 
+        for ind in pop:
+            if ind.rank == 0:
+                best_front.append(ind)
+                best_front_fit_gen.append(ind.fitness.values)
+                best_front_param_gen.append(tuple(ind))
+
         # Number of Non_Dominand solutions
         ND = len(best_front)
 
@@ -390,6 +403,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
         # Since this is a minimization problem, it is expected to decrease over generations but not always
         Di = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
+        HV = hypervolume(best_front, [1, 1])
+        # Convergence
+        #CV = convergence(pop[gen-1], pop[gen])
+        #print(CV)
+        # make everything deap compatible
 
 #_______________________________________________________________________________________________
 
@@ -406,7 +424,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         # Write log statistics about the new population
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, ND_dist_avg=Di, **record)
+        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, GD=Di, HV=HV, **record)
         logfile1.write("{}\n".format(logbook1.stream))
 
         # Store population data and write logs
@@ -437,13 +455,12 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
-           
+
             # Fill the dictionary using the dict(key=value[, ...]) constructor
             out = dict(pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, best_front_fit=best_front_fit, \
                 best_front_param=best_front_param, iter_tot=iter_tot, generation=gen)
             with open("checkpoint_files/output_gen_{}.pkl".format(gen), "wb+") as out_file:
                 pickle.dump(out, out_file)
-
 
         # Count gen 
         gen+=1
@@ -467,45 +484,3 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 # Call the optimization routine
 pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
-
-
-
-
-'''
-
-#================================ Post Processing ===================================
-# Choose which generation you want to show in plots
-gen = -1 # here we chose the last gen (best)
-pop_fit = pop_fit[gen]  
-pop_fit = numpy.array(pop_fit) 
-
-
-# Find best solution
-best_idx, dist = BestSol(pop_fit, weights=[1, 1], normalize=False).EUDIST()
-
-
-# Visualize the results (here we used the visualization module of pymoo extensively)
-
-from Visualization.ExaPlots import StressStrain
-# Note that: pop_stress[gen][ind][expSim][file]
-# first dimension is the selected generation, 
-# second is the selected individual, 
-# third is if we want to use experiment [0] or simulation [1] data, 
-# forth is the selected experiment file used for the simulation 
-strain_rate=1e-3
-for k in range(numpy.array(pop_stress).shape[3]):
-    S_exp = pop_stress[gen][best_idx][0][k]
-    S_sim = pop_stress[gen][best_idx][1][k]
-    plot = StressStrain(S_exp, S_sim, epsdot = strain_rate)
-
-from Visualization.scatter import Scatter
-plot = Scatter(tight_layout=False)
-plot.add(pop_fit, s=20)
-plot.add(pop_fit[best_idx], s=30, color="red")
-plot.add(ref_points, color="blue")
-plot.show()
-plot = Scatter()
-plot.add(pop_fit, s=20)
-plot.add(pop_fit[best_idx], s=30, color="red")
-plot.show()
-'''
