@@ -115,7 +115,7 @@ seed=1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None#"checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint= "checkpoint_files/checkpoint_gen_13.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -330,14 +330,18 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
 
+
         # If UNSGA3 == True then we apply the UNSGA3 niching to the population 
         # Look at the corresponding paper
         if UNSGA3 == True:
-            pop = tools.emo_mod.niching_selection_UNSGA3(pop)
-        # varAnd does the previously registered crossover and mutation methods. 
-        # Produces the offsprings and deletes their previous fitness values
-        offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)   
-        
+            Upop = tools.emo_mod.niching_selection_UNSGA3(pop)
+            offspring = algorithms.varAnd(Upop, toolbox, CXPB, MUTPB)   
+        else:
+            # varAnd does the previously registered crossover and mutation methods. 
+            # Produces the offsprings and deletes their previous fitness values
+            offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)   
+
+
         # Evaluate the individuals that their fitness has not been evaluated
         # Returns the invalid_ind (in each row, returns the genes of each invalid_ind). 
         # Invalid_ind are those which their fitness value has not been calculated 
@@ -385,7 +389,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Returns optimal front and population after selection
         pop = toolbox.select(pop + offspring, NPOP)
 
-
+        # Find best front with rank=0
         best_front=[]
         best_front_param_gen =[]
         best_front_fit_gen =[]                 
@@ -402,8 +406,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Here, optimum point will be the the origin [0,0,...,0]
         # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
         # Since this is a minimization problem, it is expected to decrease over generations but not always
-        Di = ((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))**(1/2)
-        HV = hypervolume(best_front, [1, 1])
+        Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
+        HV = hypervolume(pop, [1]*NOBJ)
         # Convergence
         #CV = convergence(pop[gen-1], pop[gen])
         #print(CV)
