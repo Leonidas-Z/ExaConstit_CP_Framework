@@ -2,54 +2,60 @@ import pickle
 import random
 from DEAP_mod import creator, base
 import numpy
+from ExaConstit_SolPicker import BestSol
 
 
 NOBJ = 2
-GEN = 2
-checkpoint="adsfasfd"
+GEN = -1
+checkpoint = "checkpoint_files/checkpoint_gen_5.pkl"
 
 
-def PostProcess(pop_lib=None, checkpoint=None, NOBJ=NOBJ):
 
-    # Create minimization problem (multiply -1 weights)
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
-    # Create the Individual class that it has also the fitness (obj function results) as a list
-    creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, stress=None)
+# Create classes needed for pickle to read the data
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
+creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, stress=None)
 
-    if pop_lib==None and checkpoint==None:
+
+def PostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
+
+    if pop_library==None and checkpoint==None:
         raise "No inputs provided"
         
     elif not checkpoint==None:
 
         with open(checkpoint,"rb+") as ckp_file:
-                ckp = pickle.load(ckp_file)
+            ckp = pickle.load(ckp_file)
         try:
             # Retrieve the state of the last checkpoint
-            pop_lib = ckp["population_library"]
+            pop_library = ckp["population_library"]
         except:
             raise "Could not read checkpoint file"
 
     # Retrieve some more info
-    NGEN = pop_lib.shape[0]
-    NPOP = pop_lib.shape[1]
+    NGEN = pop_library.shape[0]
+    NPOP = pop_library.shape[1]
+    NDIM = pop_library.shape[2]
+    print(NGEN,NPOP,NDIM)
 
-    # Extract useful data from the pop class
+    # Initialize temperary data lists
     pop_fit_gen=[]
     pop_par_gen=[]
     pop_stress_gen=[]
     best_front_gen=[]
     best_front_par_gen=[]
     best_front_fit_gen=[]
-    best_front_stress_gen=[]     
+    best_front_stress_gen=[]
+    # Initialize the finale data lists    
     pop_fit = []
     pop_param = []
     pop_stress = []
-    # For gen=0 we dont do selection thus there is no best_front
+    # For gen=0 we don not perform selection, thus, there is no best_front
     best_front_par = [[None]]
-    best_front_fit = [[None]] 
+    best_front_fit = [[None]]
+    best_index = []
 
     for gen in range(NGEN):
-        for ind in pop_lib[gen]:
+        for ind in pop_library[gen]:
             pop_fit_gen.append(ind.fitness.values)
             pop_par_gen.append(tuple(ind))
             pop_stress_gen.append(ind.stress)
@@ -61,21 +67,25 @@ def PostProcess(pop_lib=None, checkpoint=None, NOBJ=NOBJ):
                     best_front_par_gen.append(tuple(ind))
                     best_front_stress_gen.append(ind.stress)
 
+        # Store all data for each generation
         best_front_fit.append(best_front_fit_gen)
         best_front_par.append(best_front_par_gen)
         pop_fit.append(pop_fit_gen)
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
+        # Find best solution for each generation and store it
+        best_idx_gen = BestSol(pop_fit[gen], weights=[1, 1]).EUDIST()
+        best_index.append(best_idx_gen)
 
-        # Make data numpy type (best_front has different size per generation, thus it is not so simple)
+
+
+    # VISUALIZATION
+
+    # Make data numpy type (best_front has different size per generation, thus it is not so simple)
     pop_fit = numpy.array(pop_fit)
 
-
-
-    # Find best solution
-    from ExaConstit_SolPicker import BestSol
-    best_idx = BestSol(pop_fit[GEN], weights=[1, 1]).EUDIST()
-
+    # Choose the best solution for the selected generation argument 
+    best_idx = best_index[GEN]
 
     # Visualize the results (here we used the visualization module of pymoo extensively)
     from Visualization.ExaPlots import StressStrain
@@ -118,4 +128,3 @@ def PostProcess(pop_lib=None, checkpoint=None, NOBJ=NOBJ):
             plot.add(pop_fit[GEN][k-4:k])
     plot.show()
 
-    # VISUALIZATION
