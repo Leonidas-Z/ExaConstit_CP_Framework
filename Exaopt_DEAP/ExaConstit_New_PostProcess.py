@@ -5,18 +5,30 @@ import numpy
 from ExaConstit_SolPicker import BestSol
 
 
+''' 
+This script is using pymoo module visualization folder to show useful plots of the data as a PostProcessing procedure and
+it has no DEAP dependencies. 
+This script can be used for any output file independantly of the optimization procedure. Therefore, it can be called 
+during the optimization framework to watch its progress for a specified generation that has already been calculated.
+How to run: You can call this function from any script or you can specify the inputs and run this script
+'''
+
+
+#========================= Inputs ==============================
 NOBJ = 2
 GEN = -1
 checkpoint = "checkpoint_files/checkpoint_gen_5.pkl"
 
 
 
+
+
+#====================== Post Processing ========================
 # Create classes needed for pickle to read the data
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, stress=None)
 
-
-def PostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
+def ExaPostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
 
     if pop_library==None and checkpoint==None:
         raise "No inputs provided"
@@ -128,3 +140,5 @@ def PostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
             plot.add(pop_fit[GEN][k-4:k])
     plot.show()
 
+
+ExaPostProcess(pop_library=None, checkpoint=checkpoint, NOBJ=NOBJ, GEN = GEN)
