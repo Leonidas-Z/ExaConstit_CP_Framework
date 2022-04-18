@@ -7,6 +7,7 @@ Description:
 
 These scripts are used for running GA optimization with ExaConstit simulation package
 
+Python package
 pyGAD version is running with:
   python 3.9.7
   numpy 1.20.3
