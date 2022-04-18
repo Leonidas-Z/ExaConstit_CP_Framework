@@ -115,7 +115,7 @@ seed=1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= "checkpoint_files/checkpoint_gen_13.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_13.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -124,8 +124,8 @@ fail_limit = 5
 # Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
 # Specify the threshold number of generations so that after this generation, the criteria becomes active
 # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
-stop_limit = 5
 Imin = int(round(NGEN/2))
+stop_limit = 5
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -240,6 +240,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logfile1 = open("logbook1_stats.log","w+")
         logbook2 = tools.Logbook()
         logfile2 = open("logbook2_solutions.log","w+")
+        write_ExaProb_log("Geneartion: 0", "info", True)
 
         # Initialize counters and lists
         iter_pgen = 0       # iterations per generation
@@ -332,11 +333,14 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 
         # If UNSGA3 == True then we apply the UNSGA3 niching to the population 
-        # Look at the corresponding paper
+        # Look at the corresponding paper: https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
         if UNSGA3 == True:
-            Upop = tools.emo_mod.niching_selection_UNSGA3(pop)
-            offspring = algorithms.varAnd(Upop, toolbox, CXPB, MUTPB)   
+            # If U-NSGA-III
+            if not NOBJ == 1: 
+                Upop = tools.niching_selection_UNSGA3(pop)
+                offspring = algorithms.varAnd(Upop, toolbox, CXPB, MUTPB)   
         else:
+            # If NSGA-III
             # varAnd does the previously registered crossover and mutation methods. 
             # Produces the offsprings and deletes their previous fitness values
             offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)   
