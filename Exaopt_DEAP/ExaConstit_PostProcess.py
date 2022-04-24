@@ -1,10 +1,9 @@
-from matplotlib.pyplot import grid
+import pickle 
+from DEAP_mod import creator, base
 import numpy
-import pickle
-import sys
+from ExaConstit_SolPicker import BestSol
 
 
-        
 ''' 
 This script is using pymoo module visualization folder to show useful plots of the data as a PostProcessing procedure and
 it has no DEAP dependencies. 
@@ -15,93 +14,127 @@ How to run: You can call this function from any script or you can specify the in
 
 
 #========================= Inputs ==============================
-gen = -1
-output = "checkpoint_files/output_gen_6.pkl"
+NOBJ = 2
+GEN = -1
+checkpoint = "checkpoint_files/checkpoint_gen_30.pkl"
+
 
 
 
 
 #====================== Post Processing ========================
-def ExaPostProcessing(output="checkpoint_files/output_gen_1.pkl", gen=-1):
+# Create classes needed for pickle to read the data
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
+creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, stress=None)
 
-    # Retrieve the state of the specified output file
-    with open(output,"rb+") as ckp_file:
-        ckp = pickle.load(ckp_file)
+def ExaPostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
 
-    pop_fit = ckp["pop_fit"]
-    pop_param = ckp["pop_param"]
-    pop_stress = ckp["pop_stress"]
-    best_front_fit = ckp["best_front_fit"]
-    best_front_param = ckp["best_front_param"]
-    iter_tot = ckp["iter_tot"]
-    last_gen = ckp["generation"]
+    if pop_library==None and checkpoint==None:
+        raise "No inputs provided"
+
+    elif not checkpoint==None:
+
+        with open(checkpoint,"rb+") as ckp_file:
+            ckp = pickle.load(ckp_file)
+        try:
+            # Retrieve the state of the last checkpoint
+            pop_library = ckp["pop_library"]
+        except:
+            raise "Could not read checkpoint file"
+
+    # Retrieve some more info
+    NGEN = numpy.array(pop_library).shape[0]
+    NPOP = numpy.array(pop_library).shape[1]
+    NDIM = numpy.array(pop_library).shape[2]
+
+    # Initialize the finale data lists    
+    pop_fit = []
+    pop_param = []
+    pop_stress = []
+    best_idx = []
+
+    # For gen=0 we don not perform selection, thus, there is no best_front
+    best_front_par = [[None]]
+    best_front_fit = [[None]]
+
+    for gen in range(NGEN):
+
+        # Initialize temporary data lists
+        pop_fit_gen=[]
+        pop_par_gen=[]
+        pop_stress_gen=[]
+        best_front_par_gen=[]
+        best_front_fit_gen=[]
+        best_front_stress_gen=[]
+
+        for ind in pop_library[gen]:
+            pop_fit_gen.append(ind.fitness.values)
+            pop_par_gen.append(ind)
+            pop_stress_gen.append(ind.stress)
+    
+            if not gen == 0:
+                if ind.rank == 0:
+                    best_front_fit_gen.append(ind.fitness.values)
+                    best_front_par_gen.append(ind)
+                    best_front_stress_gen.append(ind.stress)
+
+        # Store all data for each generation
+        best_front_fit.append(best_front_fit_gen)
+        best_front_par.append(best_front_par_gen)
+        pop_fit.append(pop_fit_gen)
+        pop_param.append(pop_par_gen)
+        pop_stress.append(pop_stress_gen)
+
+        # Find best solution for each generation and store it
+        best_idx.append( BestSol(pop_fit[gen], weights=[1, 1]).EUDIST() )
+
+
+
+    # VISUALIZATION
 
     # Make data numpy type (best_front has different size per generation, thus it is not so simple)
     pop_fit = numpy.array(pop_fit)
-
-    # Retrieve some more info
-    NGEN = pop_fit.shape[0]
-    NPOP = pop_fit.shape[1]
-    NOBJ = pop_fit.shape[2]
-
-
-    # Find best solution
-    from ExaConstit_SolPicker import BestSol
-    best_idx = BestSol(pop_fit[gen], weights=[1, 1]).EUDIST()
-
 
     # Visualize the results (here we used the visualization module of pymoo extensively)
     from Visualization.ExaPlots import StressStrain
     # Note that: pop_stress[gen][ind][expSim][file]
     # first dimension is the selected generation, 
-    # second is the selected individual, 
-    # third is if we want to use experiment [0] or simulation [1] data, 
+    # second is the selected individual, third is if we want to use experiment [0] or simulation [1] data, 
     # forth is the selected experiment file used for the simulation 
     strain_rate=1e-3
     for k in range(numpy.array(pop_stress).shape[3]):
-        S_exp = pop_stress[gen][best_idx][0][k]
-        S_sim = pop_stress[gen][best_idx][1][k]
+        S_exp = pop_stress[GEN][best_idx[GEN]][0][k]
+        S_sim = pop_stress[GEN][best_idx[GEN]][1][k]
         plot = StressStrain(S_exp, S_sim, epsdot = strain_rate)
 
 
     from Visualization.scatter import Scatter
     plot = Scatter()
-    plot.add(pop_fit[gen], s=20)
-    plot.add(numpy.array(best_front_fit[gen]), s=20, color="orange")
-    plot.add(pop_fit[gen][best_idx], s=30, color="red")
+    plot.add(pop_fit[GEN], s=20)
+    if len(best_front_fit[GEN])!=0:
+        plot.add(numpy.array(best_front_fit[GEN]), s=20, color="orange")
+    plot.add(pop_fit[GEN][best_idx[GEN]], s=30, color="red")
     plot.show()
 
 
     from Visualization.pcp import PCP
     plot = PCP(tight_layout=False)
     plot.set_axis_style(color="grey", alpha=0.5)
-    plot.add(pop_fit[gen], color="grey", alpha=0.3)
-    plot.add(pop_fit[gen][best_idx], linewidth=2, color="red")
+    plot.add(pop_fit[GEN], color="grey", alpha=0.3)
+    plot.add(pop_fit[GEN][best_idx[GEN]], linewidth=2, color="red")
     plot.show()
 
 
     from Visualization.petal import Petal
     plot = Petal(bounds=[0, 0.05], tight_layout=False)
-    plot.add(pop_fit[gen][best_idx])
+    plot.add(pop_fit[GEN][best_idx[GEN]])
     plot.show()
     #Put out of comments if we want to see all the individual fitnesses and not only the best
     plot = Petal(bounds=[0, 0.05], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
     for k in range(1,NPOP+1):
         if k%4==0:
-            plot.add(pop_fit[gen][k-4:k])
+            plot.add(pop_fit[GEN][k-4:k])
     plot.show()
 
-    '''
-    from visualization.stress import Stress
-    strain_rate=1e-3
-    plot = Stress(tight_layout=False, epsdot=1e-3)
-    S_exp = pop_stress[gen][best_idx][0]
-    S_sim = pop_stress[gen][best_idx][1]
-    plot.add(S_exp, plot_type="line")
-    plot.add(S_sim, plot_type="line")
 
-    #plot.add(pop_stress[gen][best_idx][1][0], plot_type="line")
-    plot.show()
-    '''
-
-ExaPostProcessing(output=output, gen=gen)
+ExaPostProcess(pop_library=None, checkpoint=checkpoint, NOBJ=NOBJ, GEN = GEN)
