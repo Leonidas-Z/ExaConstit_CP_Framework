@@ -28,9 +28,9 @@ class ExaProb:
                  loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
                  #loc_input_files = "",
                  #loc_output_files ="",
-                 Exper_input_files=['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                 Sim_output_files=['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
-                 Toml_files=['./mtsdd_bcc.toml', './mtsdd_bcc.toml'],
+                 Exper_input_files=['Experiment_stress_1.txt', 'Experiment_stress_2.txt'],
+                 Sim_output_files=['test_mtsdd_bcc_stress.txt'],
+                 Toml_files=['./mtsdd_bcc_1.toml', './mtsdd_bcc_2.toml'],
                  ):
 
         self.n_obj = n_obj
