@@ -3,10 +3,9 @@ from DEAP_mod.benchmarks.tools import hypervolume, convergence, diversity
 from math import factorial
 import random
 
-import matplotlib.pyplot as plt
 import numpy
 import pymop.factory
-from deap.benchmarks.tools import igd
+from DEAP_mod.benchmarks.tools import igd
 from ExaConstit_SolPicker import BestSol
 from Visualization import ExaPlots
 
