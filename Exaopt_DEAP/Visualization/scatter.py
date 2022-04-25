@@ -119,9 +119,8 @@ class Scatter(Plot):
             else:
                 ax.scatter(F[:, 0], F[:, 1], **kwargs)
                 # default options
-                ax.axis('tight')  
-                ax.set_xlim(left=0) 
-                ax.set_ylim(bottom=0) 
+                ax.set_xlim(left=0, right=0.4) 
+                ax.set_ylim(bottom=0, top=0.4)
                 ax.grid(linestyle = '--', linewidth = 0.5)
                            
         else:
@@ -130,7 +129,7 @@ class Scatter(Plot):
             else:
                 ax.plot(F[:, 0], F[:, 1], **kwargs)
                 # default options
-                ax.axis('tight')
+                #ax.axis('tight')
                 ax.set_xlim(left=0) 
                 ax.set_ylim(bottom=0) 
                 ax.grid(linestyle = '--', linewidth = 0.5) 

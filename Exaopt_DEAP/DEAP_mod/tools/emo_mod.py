@@ -478,6 +478,14 @@ class selNSGA3WithMemory(object):
 
 def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
              worst_point=None, extreme_points=None, return_memory=False):
+    
+    """Leon Mods
+    
+    eonidas modification: Now returns the best_pareto front. If incluce rankning identification to individual,
+    then when ranking == True it will ident each individual with each rank. E.g. rank = ind.rank
+
+    """
+    
     """Implementation of NSGA-III selection as presented in [Deb2014]_.
 
     This implementation is partly based on `lmarti/nsgaiii
@@ -515,6 +523,7 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
         Part I: Solving Problems With Box Constraints. IEEE Transactions on
         Evolutionary Computation, 18(4), 577-601. doi:10.1109/TEVC.2013.2281535.
     """
+
     if nd == "standard":
         pareto_fronts = sortNondominated(individuals, k)
     elif nd == "log":
@@ -541,6 +550,19 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     front_worst = numpy.max(fitnesses[:sum(len(f) for f in pareto_fronts), :], axis=0)
     intercepts = find_intercepts(extreme_points, best_point, worst_point, front_worst)
     niches, dist = associate_to_niche(fitnesses, ref_points, best_point, intercepts)
+    
+
+    # Leonidas modification
+    # Relate each individual with its rank
+    j=0
+    for i  in range(len(pareto_fronts)):
+        for ind in pareto_fronts[i]:
+            # First and best rank is the rank 0
+            ind.rank = i
+            # Keep niches and dist for every individual
+            ind.nich = niches[j]
+            ind.nich_dist = dist[j]
+            j+=1
 
     # Get counts per niche for individuals in all front but the last
     niche_counts = numpy.zeros(len(ref_points), dtype=numpy.int64)
@@ -556,16 +578,10 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     selected = niching(pareto_fronts[-1], n, niches[sel_count:], dist[sel_count:], niche_counts)
     chosen.extend(selected)
 
-    # If 1 pareto front then best_front is the chosen
-    # If more that 1 pareto fronts then the first pareto (rank1) is the best one
-    if len(pareto_fronts)==1:
-        best_front = chosen
-    else:
-        best_front = pareto_fronts[0]
-
     if return_memory:
-        return best_front, chosen, NSGA3Memory(best_point, worst_point, extreme_points)
-    return best_front, chosen
+        return chosen, NSGA3Memory(best_point, worst_point, extreme_points)
+    return chosen
+
 
 def find_extreme_points(fitnesses, best_point, extreme_points=None):
     'Finds the individuals with extreme values for each objective function.'
@@ -660,6 +676,43 @@ def niching(individuals, k, niches, distances, niche_counts):
             available[sel_index] = False
             niche_counts[niche] += 1
             selected.append(individuals[sel_index])
+
+    return selected
+
+
+def niching_selection_UNSGA3(population):
+    """ Leonidas modification to implement U-NSGA-III, as in paper: 
+    https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
+    
+    Niching-based selection of U-NSGA-III: """
+
+    # Niching-based selection of U-NSGA-III:
+    selected = []
+    # This will be false when generation = 0 since the first inidividual 
+    # of the population, (and the rest of them), won't have any rank 
+    if not(population[0].rank==None):
+
+        # redo for two times to have complete number of population
+        while len(selected)<len(population):
+
+            for i in range(1, len(population), 2):
+                if population[i-1].nich == population[i].nich:
+                    if population[i-1].rank < population[i].rank:
+                        ps = population[i-1]
+                    elif population[i].rank < population[i-1].rank:
+                        ps = population[i]
+                    elif population[i-1].nich_dist < population[i].nich_dist:
+                        ps = population[i-1]
+                    else:
+                        ps = population[i]
+                else:
+                    ps = random.choice([population[i], population[i-1]])     
+
+                selected.append(ps)
+
+            population = random.sample(population, len(population))
+    else:
+        selected = population
 
     return selected
 
@@ -845,5 +898,5 @@ def _partition(array, begin, end):
             return j
 
 
-__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
+__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
            'selTournamentDCD', 'uniform_reference_points']

@@ -103,7 +103,7 @@ problem = ExaProb(n_obj=NOBJ,
                   ncpus = 20,
                   loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                  Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
+                  Sim_output_files = ['avg_stress_output.txt', 'avg_stress_output.txt'],
                   Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'])   
 
 
