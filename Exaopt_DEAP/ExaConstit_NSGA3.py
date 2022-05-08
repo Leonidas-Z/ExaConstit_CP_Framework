@@ -5,11 +5,10 @@ import random
 from math import factorial
 import pickle
 import sys
-import logging
 
 from ExaConstit_Problems import ExaProb
 from ExaConstit_Logger import initialize_ExaProb_log, write_ExaProb_log
-from ExaConstit_SolPicker import BestSol
+from ExaConstit_PostProcess import ExaPostProcess
 
 
 ''' 
@@ -29,9 +28,15 @@ Also please look at the associated paper for the NSGAIII
 
 
 #============================== Input Parameters ================================
+# Choose if we want to run the framework with U-NSGA-III
+# If NOBJ = 1 (one objective), this must be True
+UNSGA3=True
+
 # Problem Parameters
 # Number of obj functions
-NOBJ = 2
+# We can have 1 objective even if we have multiple different data with the following way: 
+# The algorithm will use the summation of the individual objectives and the summation as one objective 
+NOBJ = 1
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
 # How to use: Specify their upper and their lower bounds
@@ -40,8 +45,8 @@ IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
 # Specify parameters are different (dependent) per experiment data file (e.g. thermal parameters). 
 # If no such parameters, set DEP_LOW = None, DEP_UP = None
 # How to use: Specify their upper and their lower bounds
-DEP_LOW = None      #[1e-4, 1e-5, 1e-6]
-DEP_UP =  None      #[1e-2, 1e-3, 1e-4]
+DEP_LOW = None 
+DEP_UP =  None
 # Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperatures, the strain rates etc).
 # If no such parameters, set DEP_UNOPT = None. 
 # How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
@@ -57,35 +62,51 @@ if (DEP_LOW != None) and (DEP_UP != None):
         BOUND_UP.extend(DEP_UP)
     n_dep = len(DEP_LOW)
 else:
-    n_dep = None # no dependent parameters
+    # no dependent parameters
+    n_dep = None 
 
 # Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
+<<<<<<< HEAD
 NGEN = 1
 
 # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
 p = [3, 0]
 scaling = [1, 0]
+=======
+NGEN = 10
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
 
-ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
-if p[1]!=0 and scaling[1]!=0:
-    ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
-    ref_points=numpy.concatenate((ref1, ref2), axis=0)
-else: 
-    ref_points=ref1
-    
-# Number of Reference Points (NSGAIII paper)
-P = sum(p)
-H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
+# If one-objective we don't need to specify reference points
+if NOBJ == 1:
+    H = 10
+    NPOP = int(H + (4 - H % 4))
 
+<<<<<<< HEAD
 # Population number (NSGAIII paper)
 NPOP = 4#int(H + (4 - H % 4))
+=======
+else:
+    # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
+    p = [10, 0]
+    scaling = [1, 0]
 
-# GA operator related parameters
-CXPB = 1.0
-MUTPB = 1.0
+    ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
+    if p[1]!=0 and scaling[1]!=0:
+        ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
+        ref_points=numpy.concatenate((ref1, ref2), axis=0)
+    else: 
+        ref_points=ref1
+        
+    # Number of Reference Points (NSGAIII paper)
+    P = sum(p)
+    H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
+
+    # Population number (NSGAIII paper)
+    NPOP = int(H + (4 - H % 4))
 
 
 # Initialize NSGA3 and ExaProb logger and specify log level (threshold):
@@ -93,25 +114,28 @@ initialize_ExaProb_log(glob_loglvl='debug', filename='logbook3_ExaProb.log')
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
-                  mult_GA=True,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
-                  ncpus = 2,
-                  #loc_mechanics_bin ="",
+                  ncpus = 20,
+                  loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
                   Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                  Sim_output_files = ['test_mtsdd_bcc_stress.txt','test_mtsdd_bcc_stress.txt'],
+                  Sim_output_files = ['avg_stress_output.txt', 'avg_stress_output.txt'],
                   Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'])   
 
 
 # Specify seed (if checkpoint!=None it doesn't matter)
-seed=1
+seed = 1
 
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
+<<<<<<< HEAD
 checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
+=======
+checkpoint= None #"checkpoint_files/checkpoint_gen_29.pkl"
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
 
 
 #======================= Stopping criteria parameters ============================
@@ -120,8 +144,8 @@ fail_limit = 5
 # Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
 # Specify the threshold number of generations so that after this generation, the criteria becomes active
 # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
-stop_limit = 5
 Imin = int(round(NGEN/2))
+stop_limit = 5
 
 
 print("\nNumber of objective functions = {}".format(NOBJ))
@@ -138,8 +162,7 @@ print("Expected Total Simulation Runs = {}\n".format(NPOP*NOBJ*NGEN))
 # Create minimization problem (multiply -1 weights)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 # Create the Individual class that it has also the fitness (obj function results) as a list
-creator.create("Individual", list, fitness=creator.FitnessMin, stress=None)
-
+creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, nich=None, nich_dist=None, stress=None)
 
 
 #=========================== Initialize Population ============================
@@ -172,7 +195,10 @@ toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
-
+# For the case of U-NSGA-III with NOBJ = 1 (one objective function)
+toolbox.register("tournament", tools.selTournament)
+# Selection for the case of U-NSGA-III with NOBJ = 1 (one objective function)
+toolbox.register("select_one_obj", tools.selection_UNSGA3_one_obj)
 
 
 #================================ Evolution Algorithm ===========================
@@ -196,16 +222,15 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         try:
             # Retrieve random state
             random.setstate(ckp["rndstate"]) 
+
             # Retrieve the state of the last checkpoint
-            pop = ckp["population"]
-            pop_fit = ckp["pop_fit"]
-            pop_param = ckp["pop_param"]
-            pop_stress = ckp["pop_stress"]
-            best_front_fit = ckp["best_front_fit"]
-            best_front_param = ckp["best_front_param"]
+            last_gen = ckp["generation"]
+            pop_library = ckp["pop_library"]
+            pop = pop_library[last_gen]
+
             # Retrieve counters
             iter_tot = ckp["iter_tot"]
-            start_gen = ckp["generation"] + 1
+            start_gen = last_gen + 1
             if start_gen>NGEN: gen = start_gen
             fail_count = ckp["fail_count"]
             stop_count = ckp["stop_count"]
@@ -213,7 +238,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                 stop_optimization = True
             else:
                 stop_optimization = False
-            # Retrieve logbooks
+           
+           # Retrieve logbooks
             logbook1 = ckp["logbook1"]
             logbook2 = ckp["logbook2"]
        
@@ -221,7 +247,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
             sys.exit()
 
-        # Open log files and erase their contents
+        # Open excisting log files for writting
         logfile1 = open("logbook1_stats.log","w+")
         logfile1.write("loaded checkpoint: {}\n".format(checkpoint))
         logfile2 = open("logbook2_solutions.log","w+")
@@ -231,30 +257,27 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Specify seed (need both numpy and random OR change niching in DEAP script)
         random.seed(seed)  
         
-        # Initialize loggers
+        # Initialize loggers and open for writting 
         logbook1 = tools.Logbook()
         logfile1 = open("logbook1_stats.log","w+")
         logbook2 = tools.Logbook()
         logfile2 = open("logbook2_solutions.log","w+")
+        write_ExaProb_log("Generation: 0", "info")
 
         # Initialize counters and lists
-        iter_pgen = 0       # iterations per generation
-        iter_tot = 0        # total iterations
-        start_gen = 1       # starting generation
-        fail_count = 0
-        stop_count = 0
-        stop_optimization = False
-        pop_fit = []
-        pop_param = []
-        pop_stress = []
-        # For gen=0 we dont do selection thus there is no best_front
-        best_front_param = [[None]]
-        best_front_fit = [[None]]
+        iter_pgen = 0               # iterations per generation
+        iter_tot = 0                # total iterations
+        start_gen = 1               # starting generation
+        fail_count = 0              # stopping criteria counter
+        stop_count = 0              # stopping criteria counter
+        stop_optimization = False 
+        pop_library = []            # initiate population library that will save population for every generation
 
         # Produce initial population
         # We use the registered "population" method MU times and produce the population
         pop = toolbox.population(n=NPOP)                                
-        
+        pop_library.append(pop)
+
         # Returns the individuals with an invalid fitness
         # invalid_ind is a list with NDIM genes in col and invalid_ind IDs in rows)
         # Maps the fitness with the invalid_ind. Initiates the obj function calculation for each invalid_ind
@@ -263,11 +286,12 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
 
+#_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 
             iter_pgen+=1
             iter_tot+=1
-#_______________________________________________________________________________________________
+
             # If simulation failed due to parameters, generate a new individual and run simulation with the new one
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
@@ -292,57 +316,68 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ind.stress = problem.return_stress()
 #_______________________________________________________________________________________________
 
+<<<<<<< HEAD
         # Write log statistics about the new population
         logbook1.header = "gen", "iter", "runs", "ND", "GD", "HV", "std", "min", "avg", "max"
         record = stats1.compile(pop)
         logbook1.record(gen=0, iter=iter_pgen, runs=iter_pgen*NOBJ, ND=0, GD="None    ", HV="None    ", **record)
+=======
+
+        # Write logs and their headers
+        if NOBJ == 1:
+            logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
+            record = stats1.compile(pop)
+            logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
+        else:
+            logbook1.header = "gen", "iter", "simRuns", "ND", "GD", "HV", "std", "min", "avg", "max"
+            record = stats1.compile(pop)
+            logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND="None ", GD="None    ", HV="None    ", **record)
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
         logfile1.write("{}\n".format(logbook1.stream))
-        
-        # Write log file and store important data
-        pop_fit_gen = []
-        pop_par_gen = []
-        pop_stress_gen = []
         logbook2.header = "gen", "fitness", "solutions"
         for ind in pop:
             logbook2.record(gen=0, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
-            # Save data
-            pop_fit_gen.append(ind.fitness.values)
-            pop_par_gen.append(tuple(ind))
-            pop_stress_gen.append(ind.stress)
-
-        # Keep fitnesses, solutions and stress for every gen in a list
-        pop_fit.append(pop_fit_gen)
-        pop_param.append(pop_par_gen)
-        pop_stress.append(pop_stress_gen)
 
 
     # Begin the generational process
     gen = start_gen
     while gen < NGEN+1 and stop_optimization == False:
-    #for gen in range(start_gen, NGEN+1):
-          
+        
+        write_ExaProb_log("Generation: {}".format(gen), "info")
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
 
-        # Produce offsprings
-        # varAnd does the previously registered crossover and mutation methods. 
-        # Produces the offsprings and deletes their previous fitness values
-        offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)    
-                   
+        # If UNSGA3 == True then we apply the UNSGA3 niching to the population
+        # Look at the corresponding paper: https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3
+        if UNSGA3 == True:
+            # If U-NSGA-III
+            if NOBJ == 1:
+                offspring = tools.offspring_UNSGA3_one_obj(pop, NPOP, toolbox)
+                
+            else:
+                Upop = tools.niching_selection_UNSGA3(pop)
+                offspring = algorithms.varAnd(Upop, toolbox, 1, 1)
+        else:
+            # If NSGA-III
+            # varAnd does the previously registered crossover and mutation methods
+            # Produces the offsprings and deletes their previous fitness values
+            offspring = algorithms.varAnd(pop, toolbox, 1, 1)
+
         # Evaluate the individuals that their fitness has not been evaluated
         # Returns the invalid_ind (in each row, returns the genes of each invalid_ind). 
         # Invalid_ind are those which their fitness value has not been calculated 
         # Evaluates the obj functions for each invalid_ind (here we have 3 obj function thus it does 3 computations)
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]     
-        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)                
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
 
+#_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         iter_pgen = 0 
         for ind, fit in zip(invalid_ind, fitness_eval):            
             iter_pgen+=1
             iter_tot+=1
-#_______________________________________________________________________________________________
+
             # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
             if not problem.is_simulation_done() == 0:
@@ -371,7 +406,53 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
 #_______________________________________________________________________________________________
+        if NOBJ == 1:
+            # This is ordered considering the objective values, thus, the pop[0] will be the best solution
+            pop = toolbox.select_one_obj(pop + offspring, NPOP)
+            pop_library.append(pop)
 
+        else:
+
+            # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
+            # Returns optimal front and population after selection
+            pop = toolbox.select(pop + offspring, NPOP)
+            pop_library.append(pop)
+
+            # Find best front with rank=0
+            best_front=[]
+            best_front_fit_gen=[]             
+            for ind in pop:
+                if ind.rank == 0:
+                    best_front.append(ind)
+                    best_front_fit_gen.append(ind.fitness.values)
+
+            # Number of Non_Dominand solutions
+            ND = len(best_front)
+
+            # Average Eucledean distance of the non-dominated soultions (best_front)
+            # Here, optimum point will be the the origin [0,0,...,0]
+            # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
+            # Since this is a minimization problem, it is expected to decrease over generations but not always
+            Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
+            HV = hypervolume(pop, [1]*NOBJ)
+            # Convergence
+            #CV = convergence(pop[gen-1], pop[gen])
+            #print(CV)
+            # make everything deap compatible
+
+    #_______________________________________________________________________________________________
+
+            # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
+            if gen > Imin:
+                if ND == NPOP:    
+                    stop_count+=1
+                    write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
+                else:
+                    stop_count=0
+                if not stop_count < stop_limit:
+                    stop_optimization = True
+
+<<<<<<< HEAD
         # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
         # Returns optimal front and population after selection
         best_front, pop = toolbox.select(pop + offspring, NPOP)                  
@@ -410,47 +491,34 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             if not stop_count < stop_limit:
                 stop_optimization = True
 #_______________________________________________________________________________________________
+=======
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
 
-        # Write log statistics about the new population
+        # Write logs
+        logfile1 = open("logbook1_stats.log","a+")
+        logfile2 = open("logbook2_solutions.log","a+")
         record = stats1.compile(pop)
+<<<<<<< HEAD
         logbook1.record(gen=gen, iter=iter_pgen, runs=iter_pgen*NOBJ, ND=ND, GD=GD, HV=HV, **record)
+=======
+        if NOBJ == 1:
+            logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
+        else:
+            logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, GD=Di, HV=HV, **record)
+>>>>>>> b3368eb2ca911fb3c9c9580370c9da16fed5b9cf
         logfile1.write("{}\n".format(logbook1.stream))
-
-        # Store population data and write logs
-        pop_fit_gen=[]
-        pop_par_gen=[]
-        pop_stress_gen=[]
         for ind in pop: 
             logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
             logfile2.write("{}\n".format(logbook2.stream))
-            # Save data
-            pop_fit_gen.append(ind.fitness.values)
-            pop_par_gen.append(tuple(ind))
-            pop_stress_gen.append(ind.stress)
+            
 
-        # Keep fitnesses, solutions and stress for every gen in a list
-        best_front_fit.append(best_front_fit_gen)
-        best_front_param.append(best_front_param_gen)
-        pop_fit.append(pop_fit_gen)
-        pop_param.append(pop_par_gen)
-        pop_stress.append(pop_stress_gen)
-
-
-        # Generate a checkpoint and output files (the output file will be independent of DEAP module)
+        # Generate a checkpoint
         if gen % checkpoint_freq == 0:
             # Fill the dictionary using the dict(key=value[, ...]) constructor
-            ckp = dict(population=pop, pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, best_front_fit=best_front_fit, \
-                best_front_param=best_front_param, iter_tot=iter_tot, generation=gen, fail_count=fail_count, stop_count=stop_count, \
+            ckp = dict(pop_library=pop_library,  iter_tot=iter_tot, generation=gen, fail_count=fail_count, stop_count=stop_count, \
                     logbook1=logbook1, logbook2=logbook2, rndstate=random.getstate())
             with open("checkpoint_files/checkpoint_gen_{}.pkl".format(gen), "wb+") as ckp_file:
                 pickle.dump(ckp, ckp_file)
-           
-            # Fill the dictionary using the dict(key=value[, ...]) constructor
-            out = dict(pop_fit = pop_fit, pop_param=pop_param, pop_stress=pop_stress, best_front_fit=best_front_fit, \
-                best_front_param=best_front_param, iter_tot=iter_tot, generation=gen)
-            with open("checkpoint_files/output_gen_{}.pkl".format(gen), "wb+") as out_file:
-                pickle.dump(out, out_file)
-
 
         # Count gen 
         gen+=1
@@ -469,50 +537,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
     logfile1.close()
     logfile2.close()
 
-    return pop_fit, pop_param, pop_stress
-
+    return pop_library
 
 # Call the optimization routine
-pop_fit, pop_param, pop_stress = main(seed, checkpoint, checkpoint_freq)
+pop_library = main(seed, checkpoint, checkpoint_freq)
 
-
-
-
-'''
-
-#================================ Post Processing ===================================
-# Choose which generation you want to show in plots
-gen = -1 # here we chose the last gen (best)
-pop_fit = pop_fit[gen]  
-pop_fit = numpy.array(pop_fit) 
-
-
-# Find best solution
-best_idx, dist = BestSol(pop_fit, weights=[1, 1], normalize=False).EUDIST()
-
-
-# Visualize the results (here we used the visualization module of pymoo extensively)
-
-from Visualization.ExaPlots import StressStrain
-# Note that: pop_stress[gen][ind][expSim][file]
-# first dimension is the selected generation, 
-# second is the selected individual, 
-# third is if we want to use experiment [0] or simulation [1] data, 
-# forth is the selected experiment file used for the simulation 
-strain_rate=1e-3
-for k in range(numpy.array(pop_stress).shape[3]):
-    S_exp = pop_stress[gen][best_idx][0][k]
-    S_sim = pop_stress[gen][best_idx][1][k]
-    plot = StressStrain(S_exp, S_sim, epsdot = strain_rate)
-
-from Visualization.scatter import Scatter
-plot = Scatter(tight_layout=False)
-plot.add(pop_fit, s=20)
-plot.add(pop_fit[best_idx], s=30, color="red")
-plot.add(ref_points, color="blue")
-plot.show()
-plot = Scatter()
-plot.add(pop_fit, s=20)
-plot.add(pop_fit[best_idx], s=30, color="red")
-plot.show()
-'''
+ExaPostProcess(pop_library=pop_library, checkpoint=checkpoint, NOBJ=NOBJ, GEN = -1)
