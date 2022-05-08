@@ -15,12 +15,10 @@ class ExaProb:
     All the assigned files must have same length with the n_obj
     (for each obj function we need a different Experiment data set etc.)
     for loc_file and loc_mechanics, give absolute paths
-    if mult_GA=False, (run problem with simple GA), then n_obj argument doesn't do anything
     '''
 
     def __init__(self,
                  n_obj=2,
-                 mult_GA=False,
                  n_steps=[20,20],
                  n_dep=None,
                  dep_unopt=None,
@@ -45,24 +43,14 @@ class ExaProb:
         self.Exper_input_files = Exper_input_files
         self.eval_cycle = 0
         self.runs = 0
-        self.mult_GA = mult_GA
 
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([n_steps, Toml_files, Exper_input_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", "Exper_input_files", " Sim_output_files", "DEP_UNOPT"]):
-            if len(data) != n_obj and mult_GA==True:
-                write_ExaProb_log('The length of "{}" is not equal to NOBJ={}'.format(name, n_obj), type = 'error', changeline = True)
-                sys.exit()
-
-            if len(data) != len(Exper_input_files) and mult_GA == False:
+        for data, name in zip([n_steps, Toml_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", " Sim_output_files", "DEP_UNOPT"]):
+            if len(data) != len(Exper_input_files):
                 write_ExaProb_log('The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)), type ='error', changeline = True)
                 sys.exit()
         
-        # if multi-objective scheme, we should have more that 2 objectives
-        if n_obj<2 and mult_GA == True:
-            write_ExaProb_log('NOBJ={} when mult_obj=True'.format(n_obj), type = 'error', changeline = True)
-            sys.exit()
-
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
         self.S_exp = []
@@ -201,7 +189,7 @@ class ExaProb:
                
         # If use a simple GA scheme then return the summation of all the objective functions
         # If use a multiple_objective GA scheme then return individual objective functions
-        if self.mult_GA == False:
+        if self.n_obj == 1:
             F = sum(f)
             write_ExaProb_log('\tGlobal obj function: fit = '+str(F))
         else:

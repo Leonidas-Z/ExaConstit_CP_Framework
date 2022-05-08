@@ -33,7 +33,7 @@ UNSGA3=True
 
 # Problem Parameters
 # Number of obj functions
-NOBJ = 2
+NOBJ = 1
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
 # How to use: Specify their upper and their lower bounds
@@ -66,29 +66,31 @@ else:
 NDIM = len(BOUND_LOW)
 
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 50
+NGEN = 10
 
-# Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-p = [10, 0]
-scaling = [1, 0]
+# If one-objective we don't need to specify reference points
+if NOBJ == 1:
+    H = 10
+    NPOP = int(H + (4 - H % 4))
 
-ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
-if p[1]!=0 and scaling[1]!=0:
-    ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
-    ref_points=numpy.concatenate((ref1, ref2), axis=0)
-else: 
-    ref_points=ref1
-    
-# Number of Reference Points (NSGAIII paper)
-P = sum(p)
-H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
+else:
+    # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
+    p = [10, 0]
+    scaling = [1, 0]
 
-# Population number (NSGAIII paper)
-NPOP = int(H + (4 - H % 4))
+    ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
+    if p[1]!=0 and scaling[1]!=0:
+        ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
+        ref_points=numpy.concatenate((ref1, ref2), axis=0)
+    else: 
+        ref_points=ref1
+        
+    # Number of Reference Points (NSGAIII paper)
+    P = sum(p)
+    H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
 
-# GA operator related parameters
-CXPB = 1.0
-MUTPB = 1.0
+    # Population number (NSGAIII paper)
+    NPOP = int(H + (4 - H % 4))
 
 
 # Initialize NSGA3 and ExaProb logger and specify log level (threshold):
@@ -96,7 +98,6 @@ initialize_ExaProb_log(glob_loglvl='debug', filename='logbook3_ExaProb.log')
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
-                  mult_GA=True,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
                   n_steps=[20,20],
@@ -108,13 +109,13 @@ problem = ExaProb(n_obj=NOBJ,
 
 
 # Specify seed (if checkpoint!=None it doesn't matter)
-seed=1
+seed = 1
 
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= "checkpoint_files/checkpoint_gen_29.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_29.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -175,6 +176,10 @@ toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
+# For the case of U-NSGA-III with one objective function
+toolbox.register("tournament", tools.selTournament)
+# Selection for the case of U-NSGA-III with one objective function
+toolbox.register("select_one_obj", tools.selection_UNSGA3_one_obj)
 
 
 
@@ -295,9 +300,14 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 
         # Write logs and their headers
-        logbook1.header = "gen", "iter", "simRuns", "ND", "GD", "HV", "std", "min", "avg", "max"
-        record = stats1.compile(pop)
-        logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND="None ", GD="None    ", HV="None    ", **record)
+        if NOBJ == 1:
+            logbook1.header = "gen", "iter", "simRuns", "std", "min", "avg", "max"
+            record = stats1.compile(pop)
+            logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
+        else:
+            logbook1.header = "gen", "iter", "simRuns", "ND", "GD", "HV", "std", "min", "avg", "max"
+            record = stats1.compile(pop)
+            logbook1.record(gen=0, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND="None ", GD="None    ", HV="None    ", **record)
         logfile1.write("{}\n".format(logbook1.stream))
         logbook2.header = "gen", "fitness", "solutions"
         for ind in pop:
@@ -317,14 +327,17 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Look at the corresponding paper: https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3
         if UNSGA3 == True:
             # If U-NSGA-III
-            if not NOBJ == 1:
+            if NOBJ == 1:
+                offspring = tools.offspring_UNSGA3_one_obj(pop, NPOP, toolbox)
+                
+            else:
                 Upop = tools.niching_selection_UNSGA3(pop)
-                offspring = algorithms.varAnd(Upop, toolbox, CXPB, MUTPB)
+                offspring = algorithms.varAnd(Upop, toolbox, 1, 1)
         else:
             # If NSGA-III
             # varAnd does the previously registered crossover and mutation methods
             # Produces the offsprings and deletes their previous fitness values
-            offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)
+            offspring = algorithms.varAnd(pop, toolbox, 1, 1)
 
         # Evaluate the individuals that their fitness has not been evaluated
         # Returns the invalid_ind (in each row, returns the genes of each invalid_ind). 
@@ -368,52 +381,61 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ind.fitness.values = fit
             ind.stress = problem.return_stress()
 #_______________________________________________________________________________________________
+        if NOBJ == 1:
+            # This is ordered considering the objective values, thus, the pop[0] will be the best solution
+            pop = toolbox.select_one_obj(pop + offspring, NPOP)
+            pop_library.append(pop)
 
-        # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
-        # Returns optimal front and population after selection
-        pop = toolbox.select(pop + offspring, NPOP)
-        pop_library.append(pop)
+        else:
 
-        # Find best front with rank=0
-        best_front=[]
-        best_front_fit_gen=[]             
-        for ind in pop:
-            if ind.rank == 0:
-                best_front.append(ind)
-                best_front_fit_gen.append(ind.fitness.values)
+            # Select (selNSGAIII) MU individuals as the next generation population from pop+offspring
+            # Returns optimal front and population after selection
+            pop = toolbox.select(pop + offspring, NPOP)
+            pop_library.append(pop)
 
-        # Number of Non_Dominand solutions
-        ND = len(best_front)
+            # Find best front with rank=0
+            best_front=[]
+            best_front_fit_gen=[]             
+            for ind in pop:
+                if ind.rank == 0:
+                    best_front.append(ind)
+                    best_front_fit_gen.append(ind.fitness.values)
 
-        # Average Eucledean distance of the non-dominated soultions (best_front)
-        # Here, optimum point will be the the origin [0,0,...,0]
-        # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
-        # Since this is a minimization problem, it is expected to decrease over generations but not always
-        Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
-        HV = hypervolume(pop, [1]*NOBJ)
-        # Convergence
-        #CV = convergence(pop[gen-1], pop[gen])
-        #print(CV)
-        # make everything deap compatible
+            # Number of Non_Dominand solutions
+            ND = len(best_front)
 
-#_______________________________________________________________________________________________
+            # Average Eucledean distance of the non-dominated soultions (best_front)
+            # Here, optimum point will be the the origin [0,0,...,0]
+            # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
+            # Since this is a minimization problem, it is expected to decrease over generations but not always
+            Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
+            HV = hypervolume(pop, [1]*NOBJ)
+            # Convergence
+            #CV = convergence(pop[gen-1], pop[gen])
+            #print(CV)
+            # make everything deap compatible
 
-        # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
-        if gen > Imin:
-            if ND == NPOP:    
-                stop_count+=1
-                write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
-            else:
-                stop_count=0
-            if not stop_count < stop_limit:
-                stop_optimization = True
+    #_______________________________________________________________________________________________
+
+            # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
+            if gen > Imin:
+                if ND == NPOP:    
+                    stop_count+=1
+                    write_ExaProb_log('INFO: Stopping criteria: Consecutive stop_count = {}\n'.format(stop_count), "info", changeline=True)
+                else:
+                    stop_count=0
+                if not stop_count < stop_limit:
+                    stop_optimization = True
 
 
         # Write logs
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
         record = stats1.compile(pop)
-        logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, GD=Di, HV=HV, **record)
+        if NOBJ == 1:
+            logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
+        else:
+            logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, GD=Di, HV=HV, **record)
         logfile1.write("{}\n".format(logbook1.stream))
         for ind in pop: 
             logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
