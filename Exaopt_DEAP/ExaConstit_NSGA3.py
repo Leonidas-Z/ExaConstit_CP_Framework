@@ -28,11 +28,14 @@ Also please look at the associated paper for the NSGAIII
 
 
 #============================== Input Parameters ================================
-# Choos if we want to run the framework with U-NSGA-III
+# Choose if we want to run the framework with U-NSGA-III
+# If NOBJ = 1 (one objective), this must be True
 UNSGA3=True
 
 # Problem Parameters
 # Number of obj functions
+# We can have 1 objective even if we have multiple different data with the following way: 
+# The algorithm will use the summation of the individual objectives and the summation as one objective 
 NOBJ = 1
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
