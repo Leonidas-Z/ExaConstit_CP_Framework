@@ -27,8 +27,8 @@ class ExaProb:
                  #loc_input_files = "",
                  #loc_output_files ="",
                  Exper_input_files=['Experiment_stress_1.txt', 'Experiment_stress_2.txt'],
-                 Sim_output_files=['test_mtsdd_bcc_stress.txt'],
-                 Toml_files=['./mtsdd_bcc_1.toml', './mtsdd_bcc_2.toml'],
+                 Sim_output_files=['average_stress1.txt', 'average_stress2.txt'],
+                 Toml_files=['./options1.toml', './options.toml'],
                  ):
 
         self.n_obj = n_obj
@@ -106,10 +106,10 @@ class ExaProb:
 
         # Initialize
         self.S_sim = []
-        f = np.zeros(self.n_obj)
+        f = np.zeros(len(self.Exper_input_files))
 
         # Run k simulations. One for each objective function
-        for k in range(self.n_obj):
+        for k in range(len(self.Exper_input_files)):
             # Within this loop we could automatically generate the option file and job directory
             # We can then within here cd to the subdirectory that we generated
             # Count GA and Exaconstit iterations
@@ -190,7 +190,7 @@ class ExaProb:
         # If use a simple GA scheme then return the summation of all the objective functions
         # If use a multiple_objective GA scheme then return individual objective functions
         if self.n_obj == 1:
-            F = sum(f)
+            F = [sum(f)]
             write_ExaProb_log('\tGlobal obj function: fit = '+str(F))
         else:
             F = f
