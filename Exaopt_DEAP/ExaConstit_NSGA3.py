@@ -148,7 +148,6 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, nich=None, nich_dist=None, stress=None)
 
 
-
 #=========================== Initialize Population ============================
 # Generate a random individual with respect to his gene boundaries. 
 # Low and Up can be columns with same size as the number of genes of the individual
@@ -179,11 +178,10 @@ toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
-# For the case of U-NSGA-III with one objective function
+# For the case of U-NSGA-III with NOBJ = 1 (one objective function)
 toolbox.register("tournament", tools.selTournament)
-# Selection for the case of U-NSGA-III with one objective function
+# Selection for the case of U-NSGA-III with NOBJ = 1 (one objective function)
 toolbox.register("select_one_obj", tools.selection_UNSGA3_one_obj)
-
 
 
 #================================ Evolution Algorithm ===========================
