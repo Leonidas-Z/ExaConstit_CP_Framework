@@ -71,10 +71,10 @@ NDIM = len(BOUND_LOW)
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
 NGEN = 10
 
-# If one-objective we don't need to specify reference points
+# If NOBJ = 1 (one-objective), we don't need to specify reference points
 if NOBJ == 1:
-    H = 3
-    NPOP = 3 #int(H + (4 - H % 4))
+    H = 10
+    NPOP = int(H + (4 - H % 4))
 
 else:
     # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)

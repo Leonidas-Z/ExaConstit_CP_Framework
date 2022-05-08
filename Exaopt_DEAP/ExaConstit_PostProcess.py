@@ -16,7 +16,7 @@ How to run: You can call this function from any script or you can specify the in
 #========================= Inputs ==============================
 NOBJ = 1
 GEN = -1 # show last gen
-checkpoint = "checkpoint_files/checkpoint_gen_1.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_2.pkl"
 
 
 
@@ -130,11 +130,12 @@ def ExaPostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
 
 
     from Visualization.petal import Petal
-    plot = Petal(bounds=[0, 0.05], tight_layout=False)
+    bounds = [0, 0.5]
+    plot = Petal(bounds=bounds, tight_layout=False)
     plot.add(pop_fit[GEN][best_idx[GEN]])
     plot.show()
     #Put out of comments if we want to see all the individual fitnesses and not only the best
-    plot = Petal(bounds=[0, 0.05], title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
+    plot = Petal(bounds=bounds, title=["Sol %s" % t for t in range(0,NPOP)], tight_layout=False)
     for k in range(1,NPOP+1):
         if k%4==0:
             plot.add(pop_fit[GEN][k-4:k])
