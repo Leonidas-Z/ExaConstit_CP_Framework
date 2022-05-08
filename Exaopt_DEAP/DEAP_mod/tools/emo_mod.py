@@ -717,6 +717,47 @@ def niching_selection_UNSGA3(population):
     return selected
 
 
+def offspring_UNSGA3_one_obj(population, NPOP, toolbox):
+    """ Leonidas modification to implement U-NSGA-III, as in paper: 
+    https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
+    
+    Niching-based selection of U-NSGA-III: """
+
+    # Apply selection, crossover and mutation on the offspring
+    offspring = []
+    while len(offspring) < NPOP:
+        chosen = toolbox.tournament(population, 2, len(population))
+        c1, c2 = toolbox.mate(chosen[0], chosen[1])
+        c1 = toolbox.mutate(c1)
+        c2 = toolbox.mutate(c2)
+        del c1.fitness.values
+        del c2.fitness.values
+        offspring.append(c1)
+        offspring.append(c2)
+
+    return offspring
+
+
+def selection_UNSGA3_one_obj(individuals, NPOP):
+    """ Leonidas modification to implement U-NSGA-III, as in paper: 
+    https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
+    
+    Niching-based selection of U-NSGA-III: """
+
+    fitnesses = numpy.array([ind.fitness.wvalues for ind in individuals])
+    
+    # This will make a new population with ordered individuals with fittnesses from highest to lowest
+    population_new=[]
+    while len(population_new) < NPOP:
+        index = numpy.argmax(fitnesses)
+        selected = individuals(index)
+        population_new.append(selected)
+        del fitnesses[index]
+
+    # best solution is the first solution (highest fitness)
+    return population_new
+
+
 def uniform_reference_points(nobj, p=4, scaling=None):
     """Generate reference points uniformly on the hyperplane intersecting
     each axis at 1. The scaling factor is used to combine multiple layers of
@@ -898,5 +939,5 @@ def _partition(array, begin, end):
             return j
 
 
-__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
+__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'offspring_UNSGA3_one_objv', 'selection_UNSGA3_one_obj' 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
            'selTournamentDCD', 'uniform_reference_points']
