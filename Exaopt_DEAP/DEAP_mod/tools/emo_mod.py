@@ -939,5 +939,5 @@ def _partition(array, begin, end):
             return j
 
 
-__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'offspring_UNSGA3_one_objv', 'selection_UNSGA3_one_obj' 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
+__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'offspring_UNSGA3_one_obj', 'selection_UNSGA3_one_obj', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
            'selTournamentDCD', 'uniform_reference_points']
