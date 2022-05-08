@@ -479,11 +479,9 @@ class selNSGA3WithMemory(object):
 def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
              worst_point=None, extreme_points=None, return_memory=False):
     
-    """Leon Mods
-    
-    eonidas modification: Now returns the best_pareto front. If incluce rankning identification to individual,
-    then when ranking == True it will ident each individual with each rank. E.g. rank = ind.rank
-
+    """
+    Leonidas modification: If incluces rankning identification to individual,
+    it will correspond each individual with a rank. E.g. rank = ind.rank
     """
     
     """Implementation of NSGA-III selection as presented in [Deb2014]_.
@@ -717,19 +715,18 @@ def niching_selection_UNSGA3(population):
     return selected
 
 
-def offspring_UNSGA3_one_obj(population, NPOP, toolbox):
+def offspring_UNSGA3_one_obj(population, toolbox):
     """ Leonidas modification to implement U-NSGA-III, as in paper: 
     https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
     
     Niching-based selection of U-NSGA-III: """
-
     # Apply selection, crossover and mutation on the offspring
     offspring = []
-    while len(offspring) < NPOP:
+    while len(offspring) < len(population):
         chosen = toolbox.tournament(population, 2, len(population))
         c1, c2 = toolbox.mate(chosen[0], chosen[1])
-        c1 = toolbox.mutate(c1)
-        c2 = toolbox.mutate(c2)
+        c1 = toolbox.mutate(c1)[0]
+        c2 = toolbox.mutate(c2)[0]
         del c1.fitness.values
         del c2.fitness.values
         offspring.append(c1)
@@ -743,18 +740,15 @@ def selection_UNSGA3_one_obj(individuals, NPOP):
     https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
     
     Niching-based selection of U-NSGA-III: """
-
     fitnesses = numpy.array([ind.fitness.wvalues for ind in individuals])
-    
-    # This will make a new population with ordered individuals with fittnesses from highest to lowest
-    population_new=[]
-    while len(population_new) < NPOP:
-        index = numpy.argmax(fitnesses)
-        selected = individuals(index)
-        population_new.append(selected)
-        del fitnesses[index]
+    temp = zip(individuals, fitnesses)
 
-    # best solution is the first solution (highest fitness)
+    # This will make a new population with sorted individuals with fittnesses from highest to lowest
+    temp = sorted(temp, key=lambda x:x[1])
+    population_temp = list(zip(*temp))[0][0:NPOP]
+    # Convert tuple to list to make compatible with the whole optimization shceme
+    population_new = list(population_temp)
+
     return population_new
 
 
