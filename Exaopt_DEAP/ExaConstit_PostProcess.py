@@ -14,11 +14,9 @@ How to run: You can call this function from any script or you can specify the in
 
 
 #========================= Inputs ==============================
-NOBJ = 2
-GEN = -1
-checkpoint = "checkpoint_files/checkpoint_gen_30.pkl"
-
-
+NOBJ = 1
+GEN = -1 # show last gen
+checkpoint = "checkpoint_files/checkpoint_gen_1.pkl"
 
 
 
@@ -71,22 +69,28 @@ def ExaPostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
             pop_fit_gen.append(ind.fitness.values)
             pop_par_gen.append(ind)
             pop_stress_gen.append(ind.stress)
-    
-            if not gen == 0:
+
+            if NOBJ > 1 and gen != 0:
                 if ind.rank == 0:
                     best_front_fit_gen.append(ind.fitness.values)
                     best_front_par_gen.append(ind)
                     best_front_stress_gen.append(ind.stress)
 
         # Store all data for each generation
-        best_front_fit.append(best_front_fit_gen)
-        best_front_par.append(best_front_par_gen)
+        if NOBJ > 1:
+            best_front_fit.append(best_front_fit_gen)
+            best_front_par.append(best_front_par_gen)
         pop_fit.append(pop_fit_gen)
         pop_param.append(pop_par_gen)
         pop_stress.append(pop_stress_gen)
 
         # Find best solution for each generation and store it
-        best_idx.append( BestSol(pop_fit[gen], weights=[1, 1]).EUDIST() )
+        if NOBJ == 1:
+            best_idx.append( numpy.argmin(pop_fit[gen]) )
+        else:
+            # Weights must have the same length with objectives
+            weights = [1]*NOBJ  
+            best_idx.append( BestSol(pop_fit[gen], weights=weights).EUDIST() )
 
 
 
@@ -111,18 +115,18 @@ def ExaPostProcess(pop_library=None, checkpoint=None, NOBJ=NOBJ, GEN = GEN):
     from Visualization.scatter import Scatter
     plot = Scatter()
     plot.add(pop_fit[GEN], s=20)
-    if len(best_front_fit[GEN])!=0:
+    if NOBJ!=1 and len(best_front_fit[GEN])!=0:
         plot.add(numpy.array(best_front_fit[GEN]), s=20, color="orange")
     plot.add(pop_fit[GEN][best_idx[GEN]], s=30, color="red")
     plot.show()
 
-
-    from Visualization.pcp import PCP
-    plot = PCP(tight_layout=False)
-    plot.set_axis_style(color="grey", alpha=0.5)
-    plot.add(pop_fit[GEN], color="grey", alpha=0.3)
-    plot.add(pop_fit[GEN][best_idx[GEN]], linewidth=2, color="red")
-    plot.show()
+    if NOBJ != 1:
+        from Visualization.pcp import PCP
+        plot = PCP(tight_layout=False)
+        plot.set_axis_style(color="grey", alpha=0.5)
+        plot.add(pop_fit[GEN], color="grey", alpha=0.3)
+        plot.add(pop_fit[GEN][best_idx[GEN]], linewidth=2, color="red")
+        plot.show()
 
 
     from Visualization.petal import Petal
