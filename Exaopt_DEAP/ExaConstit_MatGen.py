@@ -2,9 +2,19 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
-    # If 1 obj function then x_dep should not be used
-    # Whether or not you're using voce models
+def Matgen(x_ind, x_dep=None, x_dep_unopt=None ,voce=False, fname='props_cp_mts.txt'):
+    
+    ''' 
+        There are 3 gategories of parameters that are independent of each other.
+    Please look at the documentation of ExaConstit_NSGA3.py documentation to 
+    understand how they work.
+        Whether or not you're using voce model, x_ind, x_dep, x_dep_unopt, 
+    should be lists of parameters. In extreme cases of only one input parameter,
+    it should also be a list.
+        Material output file name should have the same name as in the toml files
+    so to be able to be read by ExaCosnstit simulation program.
+    '''
+
     # File location
     floc = ''
     # File name
@@ -78,7 +88,7 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         # **These values are defined for all 24 HCP slip systems so make sure
         #   they're all defined here if using HCP materials
     else:
-        rt = ref_temp
+        rt = x_dep_unopt[0] #ref_temp
         hard_params.append(rt)
         # This param is defined for each slip system for HCP so
         # you need to either build it up as one big array and
@@ -104,7 +114,7 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         # append it to to the hard_params or just loop through
         # and append the same value to hard_params for the number
         # of slip systems.
-        slip_resist_const_g0 = x_dep[0]#8.0e-3
+        slip_resist_const_g0 = x_ind[6]#8.0e-3
         hard_params.append(slip_resist_const_g0)
         # This param is defined for each slip system for HCP so
         # you need to either build it up as one big array and
@@ -113,9 +123,9 @@ def Matgen(x_ind, x_dep=None, voce=False, fname='props_cp_mts.txt'):
         # of slip systems.
         slip_resist_const_s = 1.0e-1
         hard_params.append(slip_resist_const_s)
-        k1 = x_dep[1]#3.0e-4
+        k1 = x_ind[7]#3.0e-4
         hard_params.append(k1)
-        k2_0 = x_dep[2]#5.0e-5
+        k2_0 = x_ind[8]#5.0e-5
         hard_params.append(k2_0)
         ninv = 0.1
         hard_params.append(ninv)

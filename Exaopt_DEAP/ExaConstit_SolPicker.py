@@ -5,6 +5,9 @@ class BestSol:
     # Except for ASF, all the below ways they use as a utopian point the (0,0) and the minimization strategy
 
     def __init__(self, pop_fit, weights=None, normalize=False):
+        
+        if not type(pop_fit).__module__ == np.__name__:
+            pop_fit = np.array(pop_fit)
 
         # If weights are not given
         if weights == None:
