@@ -1,12 +1,33 @@
 import numpy as np
+import pandas as pd
 import os
 import os.path
 import subprocess
 import sys
+import glob
+import re
+import pandas as pd
 from ExaConstit_MatGen import Matgen
 from ExaConstit_Logger import write_ExaProb_log
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
 
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
+
+def fixEssVals(repl_val):
+    repl_val = re.sub("\n+", "", repl_val)
+    repl_val = ' '.join(repl_val.split())
+    repl_val = repl_val.replace("0. ", "0.0")
+    repl_val = repl_val.replace("0.000000e+00", "0.0")
+    return repl_val
 
 class ExaProb:
 
@@ -17,60 +38,192 @@ class ExaProb:
     for loc_file and loc_mechanics, give absolute paths
     '''
 
+    # Eventually will also be good to have a way to set additional parameters and cut down
+    # on input list here aka we could pass in a data frame that has all the input options per simulation.
+    # In other words, we might have a number of columns such as temperature, number of steps,
+    # time step file, mesh file, orientation file, experimental input files, and maybe others.
     def __init__(self,
-                 n_obj=2,
-                 n_steps=[20,20],
-                 n_dep=None,
-                 dep_unopt=None,
-                 ncpus=2,
-                 loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
-                 #loc_input_files = "",
-                 #loc_output_files ="",
-                 Exper_input_files=['Experiment_stress_1.txt', 'Experiment_stress_2.txt'],
-                 Sim_output_files=['average_stress1.txt', 'average_stress2.txt'],
-                 Toml_files=['./options1.toml', './options.toml'],
+                 n_dep = None,
+                 dep_unopt = None,
+                 nnodes = 1,
+                 ncpus = 2,
+                 ngpus = 0,
+                 test_dataframe = None,
+                 bin_mechanics = "~/ExaConstit/ExaConstit/build/bin/mechanics",
+                 sim_input_file_dir = './input_files/',
+                 master_toml_file = './master_options.toml',
+                 workflow_dir = './wf_files'
                  ):
-
-        self.n_obj = n_obj
+        '''
+        Initializes class
+        Inputs:
+        n_dep - optional variable (fix me: more info needed)
+        dep_unopt - optional variable (fix me: more info needed)
+        nnodes - number of nodes each simulation should make use of
+        ncpus - number of CPUs each simulation should make use of
+        ngpus - number of GPUs each simulation should make use of
+        test_dataframe = data frame that contains all of the experimental file info, 
+                         simulation steps to take, simulation parameters, and other useful info
+                         to run simulation. The number of rows ignoring the headers should be equal
+                         to number objective functions were evaluating for    
+        bin_mechanics - binary location of ExaConstit
+        sim_input_file_dir - directory of the simulation input files
+        master_toml_file - location of master toml file which all option files will be derived from
+        workflow_dir - directory that we would like all of our workflow to live in (generates dir for every iteration, gene, and exp observation) 
+        '''
+        # Where possible make sure to use absolute path for things
+        self.test_dataframe = test_dataframe
+        self.n_steps = test_dataframe['n_steps']
+        self.n_obj = len(test_dataframe)
         self.n_dep = n_dep
         self.dep_unopt = dep_unopt
+        # Could probably have this in the test data frame as well if we wanted per
+        # objective to use different resources...
+        self.nnodes = nnodes
         self.ncpus = ncpus
-        # self.loc_input_files=loc_input_files
-        # self.loc_output_files=loc_output_files
-        self.loc_mechanics = loc_mechanics
-        self.Toml_files = Toml_files
-        self.Sim_output_files = Sim_output_files
-        self.Exper_input_files = Exper_input_files
+        self.ngpus = ngpus
+        self.bin_mechanics = os.path.abspath(bin_mechanics)
+        self.master_toml_file = os.path.abspath(master_toml_file)
+        self.exper_input_files = test_dataframe['experiments']
+        self.sim_input_file_dir = os.path.abspath(sim_input_file_dir)
+        self.workflow_dir = os.path.abspath(workflow_dir)
         self.eval_cycle = 0
         self.runs = 0
 
+        self.mtoml = []
+        # Read all the data in as a single string
+        # should make doing the regex easier
+        with open(self.master_toml_file, "rt") as f:
+            mtoml = f.read()
+
+        if ngpus > 0:
+            self.rtmodel = 'CUDA'
+        else:
+            self.rtmodel = 'CPU'
+
+        for iexpt in range(len(self.exper_input_files)):
+            self.exper_input_files[iexpt] = os.path.abspath(self.exper_input_files[iexpt])
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([n_steps, Toml_files, Sim_output_files, dep_unopt], ["n_steps", "Toml_files", " Sim_output_files", "DEP_UNOPT"]):
-            if len(data) != len(Exper_input_files):
-                write_ExaProb_log('The length of "{}" is not equal to len(Exper_input_files)={}'.format(name, len(Exper_input_files)), type ='error', changeline = True)
+        for data, name in zip([n_steps, dep_unopt], ["n_steps", "DEP_UNOPT"]):
+            if len(data) != len(exper_input_files):
+                write_ExaProb_log('The length of "{}" is not equal to len(exper_input_files)={}'.format(name, len(exper_input_files)), type ='error', changeline = True)
                 sys.exit()
         
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
-        self.S_exp = []
-        for k in range(len(Exper_input_files)):
+        self.s_exp = []
+        for file, k in zip(self.exper_input_files, range(n_obj)):
             try:
-                S_exp_data = np.loadtxt(Exper_input_files[k], dtype='float', ndmin=2)
+                s_exp_data = np.loadtxt(file, dtype = 'float', ndmin = 2)
             except:
-                write_ExaProb_log("Exper_input_files[{k}] was not found!".format(k=k), type = 'error', changeline = True)
+                write_ExaProb_log("{file} was not found!".format(file = file), type = 'error', changeline = True)
                 sys.exit()
 
-            # Assuming that each experment data file has only a stress column
-            # S_exp will be a list that contains a numpy array corresponding to each file
-            S_exp = S_exp_data[:, 0]
-            self.S_exp.append(S_exp)
+            # Assuming that each experiment data file has only a stress column
+            # s_exp will be a list that contains a numpy array corresponding to each file
+            s_exp = s_exp_data[:, 0]
+            self.s_exp.append(s_exp)
 
-            if n_steps[k] != len(S_exp):
-                write_ExaProb_log("The length of S_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
+            if n_steps[k] != len(s_exp):
+                write_ExaProb_log("The length of s_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
+    def preprocess(self, x, igeneration, igene):
+        '''
+        This is used to preprocess everything and create the necessary directories
+        which our files will live in
+        '''
 
+        # I mean these never really change so we could just make these
+        # created during init if we really wanted to...
+        headers = list(self.test_dataframe.columns)
+        headers.pop(0)
+
+        if not os.path.exists(self.workflow_dir):
+            os.makedirs(self.workflow_dir)
+
+        # Separate parameters into dependent (thermal) and independent (athermal) groups
+        # x_group[0] will be the independent group. The rest will be the dependent groups for each objective
+        if self.n_dep != None:
+            self.n_ind = len(x) - len(self.Exper_input_files)*self.n_dep
+            x_dep = x[self.n_ind:]
+            x_group = [x[0:self.n_ind]]
+            x_group.extend([x_dep[k:(k + self.n_dep)] for k in range(0, len(x_dep), self.n_dep)])
+        else:
+            self.n_ind = len(x)
+            x_group = [x[0:self.n_ind]]
+
+        # Count iterations and save solutions
+        self.eval_cycle += 1
+        write_ExaProb_log("\tEvaluation Cycle: {}".format(self.eval_cycle), 'info')
+        write_ExaProb_log("\tSolution: x = {}".format(x_group))
+
+        # Create all of our work directories and such
+        for iobj in range(n_obj):
+            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(i)
+            fdironl = os.path.join(self.workflow_dir, rve_name, "") 
+            if not os.path.exists(fdironl):
+                os.makedirs(fdironl)
+            # Create symlink
+            for src in glob.glob(os.path.join(self.sim_input_file_dir, "*")):
+                fh = os.path.join(fdironl, os.path.basename(src))
+                if not os.path.exists(fh):
+                    os.symlink(src, fh)
+            # Create symlink for mechanics binary
+            fh = os.path.join(fdironl, os.path.basename(self.bin_mechanics))
+            if not os.path.exists(fh):
+                os.symlink(self.bin_mechanics, fh)
+
+            # Copying a string object so a deep copy is performed here
+            toml = self.mtoml
+            for iheader in headers:
+                search = "%%" + iheader + "%%"
+                repl_val = str(df[iheader][iDir])
+                # This line is needed as toml parsers might get mad with just the
+                # 0. and not 0.0
+                repl_val = fixEssVals(repl_val)
+                toml = re.sub(search, repl_val, toml)
+
+            search = "%%rtmodel%%"
+            toml = re.sub(search, self.rtmodel, toml)
+
+            # Output toml file
+            fh = os.path.join(fdironl, os.path.basename('options.toml'))
+            # Check to see if it is a symlink and if so remove the link
+            if os.path.islink(fh):
+                os.unlink(fh)
+            # We can now safely write out the file
+            with open(fh, "w") as f:
+                f.write(toml)
+
+            # Create mat file: props_cp_mts.txt and use the file for multiobj if more files
+            try:
+                if self.dep_unopt:
+                    if self.n_dep:
+                        Matgen(x_ind=x_group[0], x_dep=x_group[iobj + 1], x_dep_unopt = self.dep_unopt[iobj], fdir = fdironl)
+                    else:
+                        Matgen(x_ind=x_group[0], x_dep_unopt = self.dep_unopt[iobj], fdir = fdironl)
+                else:
+                    if self.n_dep:
+                        Matgen(x_ind=x_group[0], x_dep=x_group[iobj + 1], fdir = fdironl)
+                    else:
+                        Matgen(x_ind=x_group[0], fdir = fdironl)
+            except:
+                text = 'Unable to generate material properties using Matgen!'
+                write_ExaProb_log(text, 'error', changeline = True)
+                sys.exit()
+
+            # # Output job script file
+            # # We might need this later on but currently I'm not too sure...
+            # fh = os.path.join(fdironl, os.path.basename(fin))
+            # # Check to see if it is a symlink and if so remove the link
+            # if os.path.islink(fh):
+            #     os.unlink(fh)
+            # # We can now safely write out the file
+            # with open(fh, "w") as f:
+            #     f.writelines(job_script)
+            # os.chmod(fh, 0o775)
 
     def evaluate(self, x):
         # Iteration and logger info down below modifies class
