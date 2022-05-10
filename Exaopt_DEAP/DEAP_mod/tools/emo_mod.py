@@ -257,6 +257,7 @@ def sortLogNondominated(individuals, k, first_front_only=False):
 
     # Sort the fitnesses lexicographically.
     fitnesses.sort(reverse=True)
+    # Modified by Leonidas (there was a problem running next line when one objective problem)
     if obj!=0: sortNDHelperA(fitnesses, obj, front)
 
     #Extract individuals from front list here
