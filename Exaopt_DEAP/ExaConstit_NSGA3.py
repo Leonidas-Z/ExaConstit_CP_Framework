@@ -71,13 +71,20 @@ NDIM = len(BOUND_LOW)
 # Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
 NGEN = 10
 
-# If NOBJ = 1 (one-objective), we don't need to specify reference points
+
+# Specify reference points and population number
 if NOBJ == 1:
-    H = 20
-    NPOP = int(H + (4 - H % 4))
+    # Estimated number of population
+    P = 3
+    # Final number of population
+    NPOP = int(P + (4 - P % 4))
+    # Since NOBJ = 1 this will generate only one reference point
+    ref_points = tools.uniform_reference_points(NOBJ, P)
 
 else:
     # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
+    # Specify reference points (this will determine the population number automatically according to corresponding paper)
+    # We can specify more reference point planes
     p = [10, 0]
     scaling = [1, 0]
 
@@ -118,7 +125,7 @@ seed = 1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_1.pkl"
+checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -176,14 +183,8 @@ toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
 # Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fit much more different.
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-if NOBJ == 1:
-    # Selection for the case of U-NSGA-III with NOBJ = 1 (one objective function)
-    toolbox.register("select_one_obj", tools.selection_UNSGA3_one_obj)
-else:
-    # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
-    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
-# For the case of U-NSGA-III with NOBJ = 1 (one objective function)
-toolbox.register("tournament", tools.selTournament)
+# Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
+toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
 
 
 #================================ Evolution Algorithm ===========================
@@ -330,13 +331,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # If UNSGA3 == True then we apply the UNSGA3 niching to the population
         # Look at the corresponding paper: https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3
         if UNSGA3 == True:
-            # If U-NSGA-III
-            if NOBJ == 1:
-                offspring = tools.offspring_UNSGA3_one_obj(pop, toolbox)
-                
-            else:
-                Upop = tools.niching_selection_UNSGA3(pop)
-                offspring = algorithms.varAnd(Upop, toolbox, 1, 1)
+
+            Upop = tools.niching_selection_UNSGA3(pop)
+            offspring = algorithms.varAnd(Upop, toolbox, 1, 1)
+
         else:
             # If NSGA-III
             # varAnd does the previously registered crossover and mutation methods
@@ -370,7 +368,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     ind1 = invalid_ind[ind_idx[0]]
                     ind2 = invalid_ind[ind_idx[1]]
                     # Replace old individual with the new one with the hope that now the simulation will run normally
-                    ind[:] = toolbox.mate(ind1, ind2)[0]             
+                    ind[:] = toolbox.mate(ind1, ind2)[round(random.random())]             
                     ind[:] = toolbox.mutate(ind)[0]
                     # Run simulation to find the obj functions
                     fit = toolbox.evaluate(ind)
@@ -386,10 +384,15 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             ind.stress = problem.return_stress()
 #_______________________________________________________________________________________________
         if NOBJ == 1:
-            # This is ordered considering the objective values, thus, the pop[0] will be the best solution
-            # Suggestion: Remove duplicates if population too small (that is usually in our case)
-            pop = toolbox.select_one_obj(pop + offspring, NPOP, remove_dupl=True)
+            # pop is ordered considering the objective values, thus, the pop[0] will be the best solution
+            pop = toolbox.select(pop + offspring, NPOP)
             pop_library.append(pop)
+
+            # Find best solution of current pop
+            best_ind = pop[0]
+
+            # Stopping criterial for one objective problems
+            # TBD
 
         else:
 
@@ -437,10 +440,12 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         logfile1 = open("logbook1_stats.log","a+")
         logfile2 = open("logbook2_solutions.log","a+")
         record = stats1.compile(pop)
+
         if NOBJ == 1:
             logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, **record)
         else:
             logbook1.record(gen=gen, iter=iter_pgen, simRuns=iter_pgen*NOBJ, ND=ND, GD=Di, HV=HV, **record)
+
         logfile1.write("{}\n".format(logbook1.stream))
         for ind in pop: 
             logbook2.record(gen=gen, fitness=list(ind.fitness.values), solutions=list(ind))
