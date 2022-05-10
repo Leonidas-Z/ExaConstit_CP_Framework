@@ -257,7 +257,7 @@ def sortLogNondominated(individuals, k, first_front_only=False):
 
     # Sort the fitnesses lexicographically.
     fitnesses.sort(reverse=True)
-    sortNDHelperA(fitnesses, obj, front)
+    if obj!=0: sortNDHelperA(fitnesses, obj, front)
 
     #Extract individuals from front list here
     nbfronts = max(front.values())+1
@@ -744,56 +744,6 @@ def niching_selection_UNSGA3(population):
     return selected
 
 
-def offspring_UNSGA3_one_obj(population, toolbox):
-    """ Leonidas modification to implement U-NSGA-III, as in paper: 
-    https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
-    
-    Niching-based selection of U-NSGA-III: """
-    # Apply selection, crossover and mutation on the offspring
-    offspring = []
-    while len(offspring) < len(population):
-        # Binary tournaments
-        c1 = toolbox.tournament(population, 1, 2)[0]
-        c2 = toolbox.tournament(population, 1, 2)[0]
-        c1, c2 = toolbox.mate(c1, c2)
-        c1 = toolbox.mutate(c1)[0]
-        c2 = toolbox.mutate(c2)[0]
-        if c1 == c2: print("c1 = c2")
-        del c1.fitness.values
-        del c2.fitness.values
-        offspring.append(c1)
-        offspring.append(c2)
-
-    return offspring
-
-
-def selection_UNSGA3_one_obj(individuals, NPOP, remove_dupl = False):
-    """ Leonidas modification to implement U-NSGA-III, as in paper: 
-    https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
-    
-    Niching-based selection of U-NSGA-III: """
-    # Remove duplicates
-    print(len(individuals))
-    if remove_dupl == True:
-        ind_no_dupl = []
-        [ind_no_dupl.append(x) for x in individuals if x not in ind_no_dupl]
-        individuals = ind_no_dupl
-        print(len(individuals))
-   
-    # Get fitnesses
-    fitnesses = numpy.array([ind.fitness.wvalues for ind in individuals])
-    temp = zip(individuals, fitnesses)
-
-    # This will make a new population with sorted individuals with fittnesses from highest to lowest
-    temp = sorted(temp, key=lambda x:x[1])
-    pop_temp = list(zip(*temp))[0][0:NPOP]
-    # Convert tuple to list to make compatible with the whole optimization shceme
-    population = list(pop_temp)
-    print(len(population))
-
-    return population
-
-
 ######################################
 # Strength Pareto         (SPEA-II)  #
 ######################################
@@ -951,5 +901,5 @@ def _partition(array, begin, end):
             return j
 
 
-__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'offspring_UNSGA3_one_obj', 'selection_UNSGA3_one_obj', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
+__all__ = ['selNSGA2', 'selNSGA3', 'selNSGA3WithMemory', 'niching_selection_UNSGA3', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
            'selTournamentDCD', 'uniform_reference_points']
