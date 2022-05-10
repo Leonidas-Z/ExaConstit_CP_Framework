@@ -230,7 +230,11 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             logbook2 = ckp["logbook2"]
        
         except:
-            write_ExaProb_log("Wrong Checkpoint file", "error", changeline=True)
+            write_ExaProb_log("Wrong Checkpoint file: Could not retrieve all the dictionaries of the checkpoint file.", "error", changeline=True)
+            sys.exit()
+
+        if len(pop) != NPOP:
+            write_ExaProb_log("Wrong Checkpoint file: NPOP not equal between checkpoint file and problem initialization.", "error", changeline=True)
             sys.exit()
 
         # Open excisting log files for writting
