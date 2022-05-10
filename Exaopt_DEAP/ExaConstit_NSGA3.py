@@ -75,7 +75,7 @@ NGEN = 10
 # Specify reference points and population number
 if NOBJ == 1:
     # Estimated number of population
-    P = 3
+    P = 20
     # Final number of population
     NPOP = int(P + (4 - P % 4))
     # Since NOBJ = 1 this will generate only one reference point
@@ -125,7 +125,7 @@ seed = 1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= "checkpoint_files/checkpoint_gen_1.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_1.pkl"
 
 
 #======================= Stopping criteria parameters ============================
