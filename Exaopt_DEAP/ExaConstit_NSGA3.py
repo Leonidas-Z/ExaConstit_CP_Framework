@@ -73,7 +73,7 @@ NGEN = 10
 
 # If NOBJ = 1 (one-objective), we don't need to specify reference points
 if NOBJ == 1:
-    H = 3
+    H = 20
     NPOP = int(H + (4 - H % 4))
 
 else:
@@ -387,7 +387,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
         if NOBJ == 1:
             # This is ordered considering the objective values, thus, the pop[0] will be the best solution
-            pop = toolbox.select_one_obj(pop + offspring, NPOP, remove_dupl=False)
+            # Suggestion: Remove duplicates if population too small (that is usually in our case)
+            pop = toolbox.select_one_obj(pop + offspring, NPOP, remove_dupl=True)
             pop_library.append(pop)
 
         else:
