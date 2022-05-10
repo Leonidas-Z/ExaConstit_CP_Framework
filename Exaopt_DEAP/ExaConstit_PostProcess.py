@@ -16,7 +16,7 @@ How to run: You can call this function from any script or you can specify the in
 #========================= Inputs ==============================
 NOBJ = 1
 GEN = -1 # show last gen
-checkpoint = "checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint = "checkpoint_files/checkpoint_gen_4.pkl"
 
 
 
