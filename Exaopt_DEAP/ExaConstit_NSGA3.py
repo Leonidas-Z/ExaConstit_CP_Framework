@@ -73,7 +73,7 @@ NGEN = 10
 
 # If NOBJ = 1 (one-objective), we don't need to specify reference points
 if NOBJ == 1:
-    H = 10
+    H = 3
     NPOP = int(H + (4 - H % 4))
 
 else:
@@ -118,7 +118,7 @@ seed = 1
 checkpoint_freq = 1
 
 # Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_29.pkl"
+checkpoint= None #"checkpoint_files/checkpoint_gen_1.pkl"
 
 
 #======================= Stopping criteria parameters ============================
@@ -387,7 +387,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 #_______________________________________________________________________________________________
         if NOBJ == 1:
             # This is ordered considering the objective values, thus, the pop[0] will be the best solution
-            pop = toolbox.select_one_obj(pop + offspring, NPOP)
+            pop = toolbox.select_one_obj(pop + offspring, NPOP, remove_dupl=False)
             pop_library.append(pop)
 
         else:

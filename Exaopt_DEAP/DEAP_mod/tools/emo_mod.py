@@ -4,7 +4,9 @@ from collections import defaultdict, namedtuple
 from itertools import chain
 import math
 from operator import attrgetter, itemgetter
+from os import popen
 import random
+from tempfile import tempdir
 
 import numpy
 
@@ -551,7 +553,7 @@ def selNSGA3(individuals, k, ref_points, nd="log", best_point=None,
     
 
     # Leonidas modification
-    # Relate each individual with its rank
+    # Relate each individual with its rank and nich distance
     j=0
     for i  in range(len(pareto_fronts)):
         for ind in pareto_fronts[i]:
@@ -723,10 +725,13 @@ def offspring_UNSGA3_one_obj(population, toolbox):
     # Apply selection, crossover and mutation on the offspring
     offspring = []
     while len(offspring) < len(population):
-        chosen = toolbox.tournament(population, 2, len(population))
-        c1, c2 = toolbox.mate(chosen[0], chosen[1])
+        # Binary tournaments
+        c1 = toolbox.tournament(population, 1, 2)[0]
+        c2 = toolbox.tournament(population, 1, 2)[0]
+        c1, c2 = toolbox.mate(c1, c2)
         c1 = toolbox.mutate(c1)[0]
         c2 = toolbox.mutate(c2)[0]
+        if c1 == c2: print("c1 = c2")
         del c1.fitness.values
         del c2.fitness.values
         offspring.append(c1)
@@ -735,21 +740,31 @@ def offspring_UNSGA3_one_obj(population, toolbox):
     return offspring
 
 
-def selection_UNSGA3_one_obj(individuals, NPOP):
+def selection_UNSGA3_one_obj(individuals, NPOP, remove_dupl = False):
     """ Leonidas modification to implement U-NSGA-III, as in paper: 
     https://link.springer.com/chapter/10.1007/978-3-319-15892-1_3 
     
     Niching-based selection of U-NSGA-III: """
+    # Remove duplicates
+    print(len(individuals))
+    if remove_dupl == True:
+        ind_no_dupl = []
+        [ind_no_dupl.append(x) for x in individuals if x not in ind_no_dupl]
+        individuals = ind_no_dupl
+        print(len(individuals))
+   
+    # Get fitnesses
     fitnesses = numpy.array([ind.fitness.wvalues for ind in individuals])
     temp = zip(individuals, fitnesses)
 
     # This will make a new population with sorted individuals with fittnesses from highest to lowest
     temp = sorted(temp, key=lambda x:x[1])
-    population_temp = list(zip(*temp))[0][0:NPOP]
+    pop_temp = list(zip(*temp))[0][0:NPOP]
     # Convert tuple to list to make compatible with the whole optimization shceme
-    population_new = list(population_temp)
+    population = list(pop_temp)
+    print(len(population))
 
-    return population_new
+    return population
 
 
 def uniform_reference_points(nobj, p=4, scaling=None):
