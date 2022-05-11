@@ -184,7 +184,7 @@ toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND
 # Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fit much more different.
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
-toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
+toolbox.register("select", tools.selNSGA3, ref_points=ref_points, nd="standard")
 
 
 #================================ Evolution Algorithm ===========================
