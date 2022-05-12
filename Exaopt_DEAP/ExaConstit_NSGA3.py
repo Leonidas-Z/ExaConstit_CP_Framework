@@ -270,7 +270,8 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         len_invalid_ind = len(invalid_ind)
 
         fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
-        
+        # This whole map / thing almost seems a bit over kill to me as that whole process
+        # is super expensive for us.
 #_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         for ind, fit in zip(invalid_ind, fitness_eval): 

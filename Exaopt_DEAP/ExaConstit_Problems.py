@@ -52,7 +52,8 @@ class ExaProb:
                  bin_mechanics = "~/ExaConstit/ExaConstit/build/bin/mechanics",
                  sim_input_file_dir = './input_files/',
                  master_toml_file = './master_options.toml',
-                 workflow_dir = './wf_files'
+                 workflow_dir = './wf_files',
+                 job_script_file = None
                  ):
         '''
         Initializes class
@@ -69,9 +70,13 @@ class ExaProb:
         bin_mechanics - binary location of ExaConstit
         sim_input_file_dir - directory of the simulation input files
         master_toml_file - location of master toml file which all option files will be derived from
-        workflow_dir - directory that we would like all of our workflow to live in (generates dir for every iteration, gene, and exp observation) 
+        workflow_dir - directory that we would like all of our workflow to live in (generates dir for every iteration, gene, and exp observation)
+        job_script_file - optional if provided is the location of a job script that all directories should have available
         '''
         # Where possible make sure to use absolute path for things
+        if (test_dataframe is None):
+            write_ExaProb_log('Input test_dataframe was provided None type and this isn\'t allowed', type ='error', changeline = True)
+            sys.exit()
         self.test_dataframe = test_dataframe
         self.n_steps = test_dataframe['n_steps']
         self.n_obj = len(test_dataframe)
@@ -90,11 +95,25 @@ class ExaProb:
         self.eval_cycle = 0
         self.runs = 0
 
+        # Not all workflow managers might need a job script
+        # If one is provided then we need to get out the location of that file
+        # the file itself, and finally the basename of that file
+        if (job_script_file is not None):
+            self.job_script_file = os.path.abspath(job_script_file)
+            self.job_script = []
+            with open(self.job_script_file, "rt") as f:
+                self.job_script = f.read()
+            self.job_script_name = os.path.basename(job_script_file)
+        else:
+            self.job_script_file = None
+            self.job_script = None
+            self.job_script_name = None
+
         self.mtoml = []
         # Read all the data in as a single string
         # should make doing the regex easier
         with open(self.master_toml_file, "rt") as f:
-            mtoml = f.read()
+            self.mtoml = f.read()
 
         if ngpus > 0:
             self.rtmodel = 'CUDA'
@@ -134,7 +153,9 @@ class ExaProb:
         This is used to preprocess everything and create the necessary directories
         which our files will live in
         '''
-
+        # Just reset this during preprocessing stage as it will be set during post-processing
+        self.s_sim = []
+        self.flag = []
         # I mean these never really change so we could just make these
         # created during init if we really wanted to...
         headers = list(self.test_dataframe.columns)
@@ -161,7 +182,7 @@ class ExaProb:
 
         # Create all of our work directories and such
         for iobj in range(n_obj):
-            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(i)
+            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
             fdironl = os.path.join(self.workflow_dir, rve_name, "") 
             if not os.path.exists(fdironl):
                 os.makedirs(fdironl)
@@ -214,16 +235,108 @@ class ExaProb:
                 write_ExaProb_log(text, 'error', changeline = True)
                 sys.exit()
 
-            # # Output job script file
-            # # We might need this later on but currently I'm not too sure...
-            # fh = os.path.join(fdironl, os.path.basename(fin))
-            # # Check to see if it is a symlink and if so remove the link
-            # if os.path.islink(fh):
-            #     os.unlink(fh)
-            # # We can now safely write out the file
-            # with open(fh, "w") as f:
-            #     f.writelines(job_script)
-            # os.chmod(fh, 0o775)
+            # Output job script file if one was provided earlier
+            if (self.job_script is not None):
+                fh = os.path.join(fdironl, self.job_script_name)
+                # Check to see if it is a symlink and if so remove the link
+                if os.path.islink(fh):
+                    os.unlink(fh)
+                # We can now safely write out the file
+                with open(fh, "w") as f:
+                    f.writelines(self.job_script)
+                os.chmod(fh, 0o775)
+
+    def postprocess(self, x, igeneration, igene, status):
+        '''
+        This is used to postprocess everything after the runs have completed.
+        Output: the objective function(s)
+        '''
+        # Initialize
+        # We never actually make use of this so should just get rid of
+        s_sim = []
+        flag = -1
+        f = np.zeros(self.n_obj)
+
+        # Run k simulations. One for each objective function
+        for iobj in range(self.n_obj):
+            # Within this loop we could automatically generate the option file and job directory
+            # We can then within here cd to the subdirectory that we generated
+            # Count GA and Exaconstit iterations
+            self.runs += 1
+            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
+            fdironl = os.path.join(self.workflow_dir, rve_name, "")
+                        # Read the simulation output
+            # If output file exists and it is not empty, read stress
+            output_file = os.path.join(fdironl, "avg_stress.txt")
+            if os.path.exists(output_file) and os.stat(output_file).st_size != 0:
+
+                s_sim_data = np.loadtxt(output_file, dtype='float', ndmin=2)
+                # Macroscopic stress in the direction of load: 3rd column (z axis)
+                # If we're loading in the y-direction or z then this may not always be true
+                _s_sim = s_sim_data[:, 2]
+                # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
+                # I don't believe this is necessary even in the cyclic case for ExaConstit unless someone is doing
+                # everything in just the elastic regime. Also, I think for the cyclic and dwell type loading conditions
+                # you might need to be more careful about how things fit as it can be hard to get exactly 
+                _s_sim = np.unique(_s_sim)
+                # Check if data size is the same with experiment data-set in case there is a convergence issue
+                num_sim_data = _s_sim.shape[0]
+                num_exp_data = self.s_exp[iobj].shape[0]
+                
+                # It's not clear to me this is the best way to do things in the long term.
+                # Although, it is fine for the time being.
+                # A user might provide more experimental data then needed or they may provide
+                # raw data where it hasn't been smoothed out or anything
+                # Additionally, they might only care about up to a given point for their data
+                # We should work on a better way of doing this for the future at least for uniaxial loading
+                # One method might be take expt. strain and stress data and do a minimal amount of smoothing first
+                # After smoothing we could locally do a linear interpolation between experimental stress-strain 
+                # data to guess what the value should be for simulation values. It won't be perfect but it might work
+                # good enough. Alternatively, instead of a smoothing function we could look at doing something akin
+                # to a smooth spline of the data potentially from which we would then be able to obtain the values of interest.
+                if (status[iobj] == 0) and (num_sim_data == num_exp_data):
+                    flag = 0  # successful
+                    # Could produce a ton of logging noise
+                    write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
+                elif num_sim_data < num_exp_data:  
+                    flag = 1  # partially successful
+                    text = 'Simulation has unconverged results for eval_cycle = {}: no_sim_data = {} < no_exp_data = {}'.format(self.eval_cycle, no_sim_data, no_exp_data)
+                    write_ExaProb_log(text, 'warning', changeline = True)
+                    self.eval_cycle = self.eval_cycle - 1
+                    return
+                # s_sim will be a list that contains a numpy array of stress corresponding to each file
+                s_sim.append(_s_sim)
+
+            else:
+                flag = 2
+                text = 'Simulation did not run for eval_cycle = {}. The output file was empty or not existent!'.format(self.eval_cycle)
+                write_ExaProb_log(text, 'warning', changeline = True)
+                self.eval_cycle = self.eval_cycle - 1
+                self.flag.append(flag)
+                return
+
+            # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
+            # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
+            s_exp_abs = np.abs(self.s_exp[iobj])
+            s_sim_abs = np.abs(s_sim[iobj])
+            
+            f[k] = np.sqrt(np.sum((s_sim_abs - s_exp_abs)**2.0) / np.sum(s_exp_abs**2))
+            write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[k]))
+
+        self.s_sim.append(s_sim)
+        self.flag.append(flag) # will be equal to 0  
+        # If use a simple GA scheme then return the summation of all the objective functions
+        # If use a multiple_objective GA scheme then return individual objective functions
+        if self.n_obj == 1:
+            F = [np.sum(f)]
+            write_ExaProb_log('\tGlobal obj function: fit = '+str(F))
+        else:
+            F = f
+
+        write_ExaProb_log('')
+
+        return F
+
 
     def evaluate(self, x):
         # Iteration and logger info down below modifies class
@@ -355,14 +468,14 @@ class ExaProb:
         return F
 
 
-    def return_stress(self):
+    def return_stress(self, igene):
         # save stresses in a list for the particular iteration that returnStress() function is called
         stress = []
-        stress.append(self.S_exp)
-        stress.append(self.S_sim)
+        stress.append(self.s_exp)
+        stress.append(self.s_sim[igene])
         return stress
 
 
-    def is_simulation_done(self):
-        return self.flag
+    def is_simulation_done(self, igene):
+        return self.flag[igene]
 
