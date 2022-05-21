@@ -8,7 +8,6 @@ import sys
 
 from ExaConstit_Problems import ExaProb
 from ExaConstit_Logger import initialize_ExaProb_log, write_ExaProb_log
-#from ExaConstit_PostProcess import ExaPostProcess
 
 
 ''' 
@@ -36,7 +35,7 @@ UNSGA3=True
 # Number of obj functions
 # We can have 1 objective even if we have multiple different data with the following way: 
 # The algorithm will use the summation of the individual objectives and the summation as one objective 
-NOBJ = 1
+NOBJ = 2
 
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
 # How to use: Specify their upper and their lower bounds

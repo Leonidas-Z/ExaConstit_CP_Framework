@@ -2,7 +2,7 @@ import numpy as np
 
 class BestSol:
 
-    # Except for ASF, all the below ways they use as a utopian point the (0,0) and the minimization strategy
+    # Except for ASF, all the below ways use as a utopian point the (0,0) and a minimization strategy
 
     def __init__(self, pop_fit, weights=None, normalize=False):
         
@@ -37,7 +37,7 @@ class BestSol:
 
     def EUDIST(self, p=2):
 
-        # Calcualte Euclidean Weighted Distance (When p=2 then vector magnitude from the origin)
+        # Calcualte Weighted Distance (When p=2 then Euclidean distance from utopian point (0,0) or the origin)
         dist = (np.sum(self.weights * self.fit**p, axis=1))**(1/p)
         best_idx = np.argmin(dist)
 
