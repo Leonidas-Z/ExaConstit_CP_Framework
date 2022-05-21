@@ -144,7 +144,7 @@ class ExaProb:
             
             init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL) #, stderr=subprocess.DEVNULL)
 
 
             # Read the simulation output
