@@ -61,7 +61,7 @@ class ExaProb:
                 write_ExaProb_log("Exper_input_files[{k}] was not found!".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
-            # Assuming that each experment data file has only a stress column
+            # Assuming that each experment data file has at the first column the stress values
             # S_exp will be a list that contains a numpy array corresponding to each file
             S_exp = S_exp_data[:, 0]
             self.S_exp.append(S_exp)
@@ -146,9 +146,13 @@ class ExaProb:
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
             status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL) #, stderr=subprocess.DEVNULL)
 
+            # Uncomment below if run in SUMMIT
+            # run_exaconstit = 'jsrun -n6 -r6 -c1 -g1 /gpfs/alpine/world-shared/mat190/exaconstit/exaconstit-mechanics -opt {toml_name}'.format(toml_name=self.Toml_files[k])
+            # status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)  #stderr=subprocess.DEVNULL)
+
 
             # Read the simulation output
-            # If output file exists and it is not empty, read stress
+            # If output file exists and it is not empty, read stress. If empty, return corresponding error flag value
             if os.path.exists(self.Sim_output_files[k]) and os.stat(self.Sim_output_files[k]).st_size != 0:
 
                 S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
