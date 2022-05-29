@@ -26,33 +26,35 @@ Also please look at the associated paper for the NSGAIII
 '''
 
 
-#============================== Input Parameters ================================
+'''============================== Basic Parameter (INPUT) ================================'''
 # Choose if we want to run the framework with U-NSGA-III
-# If NOBJ = 1 (one objective), this must be True
+## If NOBJ = 1 (one objective), this must be True
 UNSGA3=True
 
-# Problem Parameters
 # Number of obj functions
-# We can have 1 objective even if we have multiple different data with the following way: 
-# The algorithm will use the summation of the individual objectives and the summation as one objective 
+## We can have 1 objective even if we have multiple different data with the following way: 
+## The algorithm will use the summation of the individual objectives and the summation as one objective 
 NOBJ = 2
 
+
+'''==========================  CP Parameter Constraints (INPUT) ==========================='''
 # Specify independent per experiment data file parameters (e.g. athermal parameters)
-# How to use: Specify their upper and their lower bounds
+## How to use: Specify their upper and their lower bounds
 IND_LOW = [150, 100,  50, 1500, 1e-5, 1e-3, 1e-4, 1e-5, 1e-6]
 IND_UP  = [200, 150, 100, 2500, 1e-3, 1e-1, 1e-2, 1e-3, 1e-4]
+
 # Specify parameters are different (dependent) per experiment data file (e.g. thermal parameters). 
-# If no such parameters, set DEP_LOW = None, DEP_UP = None
-# How to use: Specify their upper and their lower bounds
+## If no such parameters, set DEP_LOW = None, DEP_UP = None
+## How to use: Specify their upper and their lower bounds
 DEP_LOW = None 
 DEP_UP =  None
+
 # Specify parameters that will not be optimized and are different (dependent) per experiment data file (e.g. the temperatures, the strain rates etc).
-# If no such parameters, set DEP_UNOPT = None. 
-# How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
+## If no such parameters, set DEP_UNOPT = None. 
+## How to use: DEP_UNOPT = [[file1], [file2], ...], where [fileN] = [param1, param2, ...] 
 DEP_UNOPT = [[270], [300]]
 
-
-# Final Bounds
+# Calcualte Final Bounds considering above inputs (make list with repeated dependent parameters)
 BOUND_LOW = IND_LOW
 BOUND_UP = IND_UP
 if (DEP_LOW != None) and (DEP_UP != None):
@@ -61,64 +63,96 @@ if (DEP_LOW != None) and (DEP_UP != None):
         BOUND_UP.extend(DEP_UP)
     n_dep = len(DEP_LOW)
 else:
-    # no dependent parameters
     n_dep = None 
 
 # Number of total parameters or dimensions or genes: NDIM = len(IND) + len(DEP)*NOBJ
 NDIM = len(BOUND_LOW)
 
-# Number of generation (e.g. If NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
-NGEN = 10
 
+'''================ Specify reference points thus, population number (INPUT) ================='''
+## For NOBJ == 1 specify the number of reference points P only
+P = 20
 
-# Specify reference points and population number
+## For NOBJ != 1 specify p = [P1 , P2] and scaling = [scale1, scale2]. If want only one hyperplane, set P2 and scale2 equal to zero
+# We can specify more reference point planes
+p = [10, 0]
+scaling = [1, 0]
+
+# Generate reference points considering above inputs
 if NOBJ == 1:
-    # Estimated number of population
-    P = 20
     # Final number of population
     NPOP = int(P + (4 - P % 4))
     # Since NOBJ = 1 this will generate only one reference point
     ref_points = tools.uniform_reference_points(NOBJ, P)
 
 else:
-    # Make the reference points using the uniform_reference_points method (function is in the emo.py within the selNSGA3)
-    # Specify reference points (this will determine the population number automatically according to corresponding paper)
-    # We can specify more reference point planes
-    p = [10, 0]
-    scaling = [1, 0]
-
+    # Generate reference points
     ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
     if p[1]!=0 and scaling[1]!=0:
         ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
         ref_points=numpy.concatenate((ref1, ref2), axis=0)
     else: 
         ref_points=ref1
-        
-    # Number of Reference Points (NSGAIII paper)
+
+    # Total number of Reference Points (NSGAIII paper)
     P = sum(p)
     H = factorial(NOBJ + P - 1) / (factorial(P) * factorial(NOBJ - 1))
 
-    # Population number (NSGAIII paper)
+    # Final Population number (NSGAIII paper)
     NPOP = int(H + (4 - H % 4))
 
 
+'''========================== NSGA-III Operators Parameters (INPUT) =========================='''
+# Those are the default parameters used in NSGA-III paper for NOBJ>2. For NOBJ<=2 please use and look at U-NSGA-III paper
+# Mating Parameters
+mat_eta = 30.0
+
+# Mutation Parameters
+mut_eta = 20.0
+indpb = 1.0/NDIM
+
+
+'''================ Initialize ExaProb object (this calls ExaConstit) (INPUT) ================'''
 # Initialize NSGA3 and ExaProb logger and specify log level (threshold):
 initialize_ExaProb_log(glob_loglvl='info', filename='logbook3_ExaProb.log')
+
+# Specify number of time steps of the simulation (lenght of custom_dt) - If choose ExaConstit auto_dt then this needs modifications
+n_steps=[20,20]
+
+# Absolute path that we can find the ExaConstit binary (mechanics)
+loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics"
+
+# Specify the files that contain the Experiment data
+# When NOBJ > 1 then it must be len(Exper_input_files) == NOBJ. If NOBJ == 1 then we solve a multi-objective problem with 
+# the tradditional way (1 objective function), and thus len(Exper_input_files) > NOBJ is allowable. 
+Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt']
+
+# Specify the simulation output files. Note than if we have multiple Exper_input_files then each data will correspond to one
+# simulation and thus: len(Exper_input_files) == len(Sim_output_files)
+Sim_output_files = ['test_mtsdd_bcc_stress.txt', 'test_mtsdd_bcc_stress.txt']
+
+# Specify the Toml_files. Again, if we have multiple Exper_input_files then each data will correspond to one
+# simulation that is controlled by a separate toml file. Thus: len(Exper_input_files) == len(Toml_files)
+Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml']
+
+# Specify number of cpus that will use running each simualtion
+ncpus = 2
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
 problem = ExaProb(n_obj=NOBJ,
                   n_dep=n_dep,
                   dep_unopt = DEP_UNOPT,
-                  n_steps=[20,20],
-                  ncpus = 2,
-                  loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics",
-                  Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt'],
-                  Sim_output_files = ['test_mtsdd_bcc_stress.txt', 'test_mtsdd_bcc_stress.txt'],
-                  Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml'])   
+                  n_steps=n_steps,
+                  ncpus = ncpus,  
+                  loc_mechanics=loc_mechanics,
+                  Exper_input_files = Exper_input_files,
+                  Sim_output_files = Sim_output_files,
+                  Toml_files = Toml_files)   
 
 
-# Specify seed (if checkpoint!=None it doesn't matter)
-seed = 1
+'''============================== Checkpoint Parameters (INPUT) ==============================='''
+# Specify seed. Each time we run the framework we will get same results if inputs and seed is the same (good for debugging)
+seed = None
 
 # Specify checkpoint frequency (generations per checkpoint)
 checkpoint_freq = 1
@@ -127,16 +161,28 @@ checkpoint_freq = 1
 checkpoint= None #"checkpoint_files/checkpoint_gen_1.pkl"
 
 
-#======================= Stopping criteria parameters ============================
+'''========================== Stopping criteria parameters (INPUT) ============================'''
+# Number of generations limit (e.g. if NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
+NGEN = 10
+
 # Specify how many simulation failures in total to have so to terminate the optimization framework
-fail_limit = 5
-# Specify the number of concecutive generations that the population size (NPOP) and the number of non-dominated solutions (ND) are equal to stop the framework
-# Specify the threshold number of generations so that after this generation, the criteria becomes active
+# Note that if ExaConstit does not run because of error in the ExaProb calling code line, it will still do a number of fails equal to fail_limit.
+# Framework does not know what causes failures in the ExaConstit part. Please check toml files and names of the output files if have failures in the beggining)
+fail_limit = 2
+
+# Specify number of concecutive generation limit that the population size (NPOP) and the number of non-dominated solutions (ND) are equal (stop_limit). 
+# When reach this number, framework stops
+# Specify the number of generations (Imin) after which the criteria becomes active
 # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
 Imin = int(round(NGEN/2))
 stop_limit = 5
 
+# Another possible multi-objective stopping criteria could be to set a specific HV value (look line 469). The framework should stop when this value has been achieved
+# Note that for NOBJ == 1 case we haven't implement any stopping criteria yet
+# That is easier comparing to multi-objective case
 
+
+# Print some useful information before run the framework
 print("\nNumber of objective functions = {}".format(NOBJ))
 print("Number of parameters = {}".format(NDIM))
 print("Number of generations = {}".format(NGEN))
@@ -147,14 +193,14 @@ print("Expected Total Simulation Runs = {}\n".format(NPOP*NOBJ*NGEN))
 
 
 
-#====================== Initialize Optimization Strategy ======================
+#====================== Initialize Optimization Strategy ========================
 # Create minimization problem (multiply -1 weights)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,) * NOBJ)
 # Create the Individual class that it has also the fitness (obj function results) as a list
 creator.create("Individual", list, fitness=creator.FitnessMin, rank=None, nich=None, nich_dist=None, stress=None)
 
 
-#=========================== Initialize Population ============================
+#=========================== Initialize Population ==============================
 # Generate a random individual with respect to his gene boundaries. 
 # Low and Up can be columns with same size as the number of genes of the individual
 def uniform(low, up, size=None):  
@@ -164,7 +210,7 @@ def uniform(low, up, size=None):
         return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
 
-#### Population generator
+#===================== Population Initialization Method =========================
 toolbox = base.Toolbox()
 # Register the above individual generator method in the toolbox class. That is attr_float with arguments low=BOUND_LOW, up=BOUND_UP, size=NDIM
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -179,14 +225,14 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # Function that returns the objective functions values as a dictionary (if n_obj=3 it will evaluate the obj function 3 times and will return 3 values (str) - It runs the problem.evaluate for n_obj times)
 toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
 # Crossover function using the cxSimulatedBinaryBounded method
-toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
+toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=mat_eta)
 # Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fit much more different.
-toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=mut_eta, indpb=indpb)
 # Selection function that selects individuals from population + offspring using selNSGA3 method (non-domination levels, etc (look at paper for NSGAIII))
 toolbox.register("select", tools.selNSGA3, ref_points=ref_points, nd="standard")
 
 
-#================================ Evolution Algorithm ===========================
+#================================ Main NSGA-III Algorithm ===========================
 # Here we construct our main algorithm NSGAIII
 def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
@@ -391,7 +437,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             pop = toolbox.select(pop + offspring, NPOP)
             pop_library.append(pop)
 
-            # Find best solution of current pop
+            # Find best solution of current pop (first since the individuals are ordered)
             best_ind = pop[0]
 
             # Stopping criterial for one objective problems
@@ -421,12 +467,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Since this is a minimization problem, it is expected to decrease over generations but not always
             Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
             HV = hypervolume(pop, [1]*NOBJ)
-            # Convergence
-            # CV = convergence(pop[gen-1], pop[gen])
-            # print(CV)
-            # make everything deap compatible
-
-    #_______________________________________________________________________________________________
+            
 
             # Stopping criteria according to https://doi.org/10.1007/s10596-019-09870-3
             if gen > Imin:
@@ -484,5 +525,3 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
 # Call the optimization routine
 pop_library = main(seed, checkpoint, checkpoint_freq)
-
-#ExaPostProcess(pop_library=pop_library, checkpoint=checkpoint, NOBJ=NOBJ, GEN = -1)
