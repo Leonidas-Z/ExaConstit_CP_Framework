@@ -6,6 +6,17 @@ import sys
 from ExaConstit_MatGen import Matgen
 from ExaConstit_Logger import write_ExaProb_log
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
 
 
 class ExaProb:
@@ -141,10 +152,15 @@ class ExaProb:
 
             # Call ExaConstit to run the CP simulation
             write_ExaProb_log('\tWaiting ExaConstit for file %s ......' % self.Exper_input_files[k])
-            
-            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
-            run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
-            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL) #, stderr=subprocess.DEVNULL)
+
+            print(os.getcwd())
+            with cd(os.getcwd()):
+                run_exaconstit = 'jsrun -n40 -r40 -c1 /gpfs/alpine/world-shared/mat190/exaconstit/exaconstit-mechanics-autodt -opt {toml_name}'.format(toml_name=self.Toml_files[k])
+                run_status = subprocess.run(run_exaconstit, stdout=subprocess.PIPE, shell=True)
+                status = run_status.returncode
+            #            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
+#            run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
+#            status = subprocess.call(init_spack+' && '+run_exaconstit, shell=True, stdout=subprocess.DEVNULL) #, stderr=subprocess.DEVNULL)
 
             # Uncomment below if run in SUMMIT
             # run_exaconstit = 'jsrun -n6 -r6 -c1 -g1 /gpfs/alpine/world-shared/mat190/exaconstit/exaconstit-mechanics -opt {toml_name}'.format(toml_name=self.Toml_files[k])
