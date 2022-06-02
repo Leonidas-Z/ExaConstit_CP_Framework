@@ -1,10 +1,13 @@
 from DEAP_mod import creator, base, tools, algorithms
 from DEAP_mod.benchmarks.tools import hypervolume, convergence, diversity
-import numpy
+import numpy as np
 import random
 from math import factorial
 import pickle
 import sys
+# Normal map used for basic jobs that aren't on a cluster
+import normal_map as map_custom
+import pandas as pd
 
 from ExaConstit_Problems import ExaProb
 from ExaConstit_Logger import initialize_ExaProb_log, write_ExaProb_log
@@ -90,7 +93,7 @@ else:
     ref1 = tools.uniform_reference_points(NOBJ, p[0], scaling[0])
     if p[1]!=0 and scaling[1]!=0:
         ref2 = tools.uniform_reference_points(NOBJ, p[1], scaling[1])
-        ref_points=numpy.concatenate((ref1, ref2), axis=0)
+        ref_points=np.concatenate((ref1, ref2), axis=0)
     else: 
         ref_points=ref1
 
@@ -120,16 +123,12 @@ initialize_ExaProb_log(glob_loglvl='info', filename='logbook3_ExaProb.log')
 n_steps=[20,20]
 
 # Absolute path that we can find the ExaConstit binary (mechanics)
-loc_mechanics="~/ExaConstit/ExaConstit/build/bin/mechanics"
+loc_mechanics="/Users/carson16/Documents/Research_Code/ldrd_exacmech/exaconstit_build_test/ExaConstit/build/bin/mechanics"
 
 # Specify the files that contain the Experiment data
-# When NOBJ > 1 then it must be len(Exper_input_files) == NOBJ. If NOBJ == 1 then we solve a multi-objective problem with 
+# When NOBJ > 1 then it must be len(exper_input_files) == NOBJ. If NOBJ == 1 then we solve a multi-objective problem with 
 # the tradditional way (1 objective function), and thus len(Exper_input_files) > NOBJ is allowable. 
-Exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt']
-
-# Specify the simulation output files. Note than if we have multiple Exper_input_files then each data will correspond to one
-# simulation and thus: len(Exper_input_files) == len(Sim_output_files)
-Sim_output_files = ['test_mtsdd_bcc_stress.txt', 'test_mtsdd_bcc_stress.txt']
+exper_input_files = ['Experiment_stress_270.txt', 'Experiment_stress_300.txt']
 
 # Specify the Toml_files. Again, if we have multiple Exper_input_files then each data will correspond to one
 # simulation that is controlled by a separate toml file. Thus: len(Exper_input_files) == len(Toml_files)
@@ -137,17 +136,26 @@ Toml_files = ['./mtsdd_bcc_270.toml', './mtsdd_bcc_300.toml']
 
 # Specify number of cpus that will use running each simualtion
 ncpus = 2
+ngpus = 0
+nnodes = 1
+
+temperature_k = [270, 300]
+
+test_dataframe = {'experiments' : exper_input_files, 'n_steps' : n_steps, 'temp_k' : temperature_k}
+test_dataframe = pd.DataFrame(data = test_dataframe)
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
-problem = ExaProb(n_obj=NOBJ,
-                  n_dep=n_dep,
+problem = ExaProb(n_dep = n_dep,
                   dep_unopt = DEP_UNOPT,
-                  n_steps=n_steps,
-                  ncpus = ncpus,  
-                  loc_mechanics=loc_mechanics,
-                  Exper_input_files = Exper_input_files,
-                  Sim_output_files = Sim_output_files,
-                  Toml_files = Toml_files)   
+                  nnodes = nnodes,
+                  ncpus = ncpus,
+                  ngpus = ngpus,
+                  test_dataframe = test_dataframe,
+                  bin_mechanics = loc_mechanics,
+                  sim_input_file_dir = './input_files',
+                  master_toml_file = './master_options.toml',
+                  workflow_dir = './wf_files',
+                  job_script_file = None)
 
 
 '''============================== Checkpoint Parameters (INPUT) ==============================='''
@@ -224,6 +232,8 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 #### Evolution Methods
 # Function that returns the objective functions values as a dictionary (if n_obj=3 it will evaluate the obj function 3 times and will return 3 values (str) - It runs the problem.evaluate for n_obj times)
 toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
+toolbox.register("map_custom", map_custom.map_custom)
+toolbox.register("map_custom_fail", map_custom.map_custom_fail)
 # Crossover function using the cxSimulatedBinaryBounded method
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=mat_eta)
 # Mutation function that mutates an individual using the mutPolynomialBounded method. A high eta will producea mutant resembling its parent, while a small eta will produce a ind_fit much more different.
@@ -238,10 +248,10 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
 
     # Initialize statistics object
     stats1 = tools.Statistics(lambda ind: ind.fitness.values)
-    stats1.register("avg", numpy.mean, axis=0)
-    stats1.register("std", numpy.std, axis=0)
-    stats1.register("min", numpy.min, axis=0)
-    stats1.register("max", numpy.max, axis=0)
+    stats1.register("avg", np.mean, axis=0)
+    stats1.register("std", np.std, axis=0)
+    stats1.register("min", np.min, axis=0)
+    stats1.register("max", np.max, axis=0)
 
     # If checkpoint has a file name, read and retrieve the state of last checkpoint from this file
     # If not then start from the beginning by generating the initial population
@@ -319,18 +329,19 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
         len_invalid_ind = len(invalid_ind)
 
-        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitness_eval = toolbox.map_custom(problem, 0, invalid_ind)
         # This whole map / thing almost seems a bit over kill to me as that whole process
         # is super expensive for us.
+        genes_index = np.r_[0:len(invalid_ind)]
 #_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
-        for ind, fit in zip(invalid_ind, fitness_eval): 
+        for ind, fit, igene in zip(invalid_ind, fitness_eval, genes_index):
             iter_pgen+=1
             iter_tot+=1
 
             # If simulation failed due to parameters, generate a new individual and run simulation with the new one
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
-            if not problem.is_simulation_done() == 0:
+            if not problem.is_simulation_done(igene) == 0:
 
                 while fail_count < fail_limit:
                     fail_count+=1
@@ -339,7 +350,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     # Replace old individual with the new random one with the hope that now the simulation will run normally          
                     ind[:] = toolbox.individual()
                     # Run simulation to find the obj functions
-                    fit = toolbox.evaluate(ind)
+                    fit = toolbox.map_custom_fail(problem, 0, ind)
                     # If simulation successful break the loop 
                     if problem.is_simulation_done() == 0: 
                         break
@@ -349,7 +360,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     sys.exit()
 
             ind.fitness.values = fit
-            ind.stress = problem.return_stress()
+            ind.stress = problem.return_stress(igene)
 #_______________________________________________________________________________________________
 
 
@@ -396,18 +407,19 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
         # Invalid_ind are those which their fitness value has not been calculated
         # Evaluates the obj functions for each invalid_ind (here we have 3 obj function thus it does 3 computations)
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitness_eval = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitness_eval = toolbox.map_custom(problem, gen, invalid_ind)
+        genes_index = np.r_[0:len(invalid_ind)]
 
 #_______________________________________________________________________________________________
         # Evaluates the fitness for each invalid_ind and assigns them the new values
         iter_pgen = 0 
-        for ind, fit in zip(invalid_ind, fitness_eval):            
+        for ind, fit, igene in zip(invalid_ind, fitness_eval, genes_index):            
             iter_pgen+=1
             iter_tot+=1
 
             # If simulation failed due to parameters, pick randomly 2 indivuduals, mate and mutate and try to run simulation with the new individual
             # Stopping criteria: If there is more than fail_limit number of simulation failures, terminate framework
-            if not problem.is_simulation_done() == 0:
+            if not problem.is_simulation_done(igene) == 0:
 
                 while fail_count < fail_limit:
                     fail_count+=1
@@ -421,7 +433,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     ind[:] = toolbox.mate(ind1, ind2)[round(random.random())]             
                     ind[:] = toolbox.mutate(ind)[0]
                     # Run simulation to find the obj functions
-                    fit = toolbox.evaluate(ind)
+                    fit = toolbox.map_custom_fail(problem, gen, ind)
                     # If simulation successful break the loop   
                     if problem.is_simulation_done() == 0: 
                         break
@@ -431,7 +443,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
                     sys.exit()
 
             ind.fitness.values = fit
-            ind.stress = problem.return_stress()
+            ind.stress = problem.return_stress(igene)
 #_______________________________________________________________________________________________
         if NOBJ == 1:
             # pop is ordered considering the objective values, thus, the pop[0] will be the best solution
@@ -466,7 +478,7 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             # Here, optimum point will be the the origin [0,0,...,0]
             # Average Euclidean distance according to: https://doi.org/10.1007/s10596-019-09870-3
             # Since this is a minimization problem, it is expected to decrease over generations but not always
-            Di = numpy.sqrt((1/ND)*numpy.sum(numpy.array(best_front_fit_gen)**2))
+            Di = np.sqrt((1/ND)*np.sum(np.array(best_front_fit_gen)**2))
             HV = hypervolume(pop, [1]*NOBJ)
             
 

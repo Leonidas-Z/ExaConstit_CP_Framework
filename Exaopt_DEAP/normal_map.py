@@ -42,7 +42,8 @@ def map_custom(problem, igeneration, genes):
             # cd into directory and run command and then when this code block exits it returns us
             # to the working directory
             with cd(fdironl):
-                istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
+                print("Running: " + rve_name)
+                istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)
                 istatus.append(istatus_o)
         status.append(istatus)
 
@@ -54,4 +55,36 @@ def map_custom(problem, igeneration, genes):
     return f_objective
 
 # Will want a custom way to handle one off launches for failed tests
-        
+def map_custom_fail(problem, igeneration, gene, igene):
+    '''
+    Probably won't be as efficient as just doing it the current map way
+    but this should allow us to repeat this process more or less in other areas and
+    have something that is like what the other mapping functions might do.
+    '''
+
+    status = []
+
+    run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=problem.ncpus, mechanics=problem.bin_mechanics, toml_name='options.toml')
+
+    f_objective = []
+
+    # Preprocess all of the genes first
+    problem.preprocess(gene, igeneration, igene)
+
+    # Run all of the gene data next
+    istatus = []
+    for iobj in range(problem.n_obj):
+        rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
+        fdironl = os.path.join(problem.workflow_dir, rve_name, "")
+        # cd into directory and run command and then when this code block exits it returns us
+        # to the working directory
+        with cd(fdironl):
+            istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)
+            istatus.append(istatus_o)
+    status.append(istatus)
+
+    # Post-process all of the data last
+    f = problem.postprocess(igeneration, igene, status[0])
+    f_objective.append(f)
+
+    return f_objective

@@ -139,4 +139,4 @@ def Matgen(x_ind, x_dep=None, x_dep_unopt=None , voce=False, fdir='./', fname='p
     # File location
     fdiro = os.path.abspath(fdir)
     floc = os.path.join(fdiro, os.path.basename(fname))
-    np.savetxt(floc + fname, params)
+    np.savetxt(floc, params)

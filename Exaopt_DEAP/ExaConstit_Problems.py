@@ -124,15 +124,15 @@ class ExaProb:
             self.exper_input_files[iexpt] = os.path.abspath(self.exper_input_files[iexpt])
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([n_steps, dep_unopt], ["n_steps", "DEP_UNOPT"]):
-            if len(data) != len(exper_input_files):
+        for data, name in zip([self.n_steps, self.dep_unopt], ["n_steps", "DEP_UNOPT"]):
+            if len(data) != len(self.exper_input_files):
                 write_ExaProb_log('The length of "{}" is not equal to len(exper_input_files)={}'.format(name, len(exper_input_files)), type ='error', changeline = True)
                 sys.exit()
         
         # Read Experiment data sets and save to S_exp
         # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
         self.s_exp = []
-        for file, k in zip(self.exper_input_files, range(n_obj)):
+        for file, k in zip(self.exper_input_files, range(self.n_obj)):
             try:
                 s_exp_data = np.loadtxt(file, dtype = 'float', ndmin = 2)
             except:
@@ -144,7 +144,7 @@ class ExaProb:
             s_exp = s_exp_data[:, 0]
             self.s_exp.append(s_exp)
 
-            if n_steps[k] != len(s_exp):
+            if self.n_steps[k] != len(s_exp):
                 write_ExaProb_log("The length of s_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
                 sys.exit()
 
@@ -181,7 +181,7 @@ class ExaProb:
         write_ExaProb_log("\tSolution: x = {}".format(x_group))
 
         # Create all of our work directories and such
-        for iobj in range(n_obj):
+        for iobj in range(self.n_obj):
             rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
             fdironl = os.path.join(self.workflow_dir, rve_name, "") 
             if not os.path.exists(fdironl):
@@ -200,7 +200,7 @@ class ExaProb:
             toml = self.mtoml
             for iheader in headers:
                 search = "%%" + iheader + "%%"
-                repl_val = str(df[iheader][iDir])
+                repl_val = str(self.test_dataframe[iheader][iobj])
                 # This line is needed as toml parsers might get mad with just the
                 # 0. and not 0.0
                 repl_val = fixEssVals(repl_val)
@@ -246,7 +246,7 @@ class ExaProb:
                     f.writelines(self.job_script)
                 os.chmod(fh, 0o775)
 
-    def postprocess(self, x, igeneration, igene, status):
+    def postprocess(self, igeneration, igene, status):
         '''
         This is used to postprocess everything after the runs have completed.
         Output: the objective function(s)
@@ -320,8 +320,8 @@ class ExaProb:
             s_exp_abs = np.abs(self.s_exp[iobj])
             s_sim_abs = np.abs(s_sim[iobj])
             
-            f[k] = np.sqrt(np.sum((s_sim_abs - s_exp_abs)**2.0) / np.sum(s_exp_abs**2))
-            write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[k]))
+            f[iobj] = np.sqrt(np.sum((s_sim_abs - s_exp_abs)**2.0) / np.sum(s_exp_abs**2))
+            write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[iobj]))
 
         self.s_sim.append(s_sim)
         self.flag.append(flag) # will be equal to 0  
@@ -336,7 +336,6 @@ class ExaProb:
         write_ExaProb_log('')
 
         return F
-
 
     def evaluate(self, x):
         # Iteration and logger info down below modifies class
@@ -468,7 +467,6 @@ class ExaProb:
         write_ExaProb_log('')
 
         return F
-
 
     def return_stress(self, igene):
         # save stresses in a list for the particular iteration that returnStress() function is called
