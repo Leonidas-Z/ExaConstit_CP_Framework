@@ -139,7 +139,7 @@ class ExaProb:
                 write_ExaProb_log("{file} was not found!".format(file = file), type = 'error', changeline = True)
                 sys.exit()
 
-            # Assuming that each experiment data file has only a stress column
+            # Assuming that each experiment data file has at the first column the stress values
             # s_exp will be a list that contains a numpy array corresponding to each file
             s_exp = s_exp_data[:, 0]
             self.s_exp.append(s_exp)
@@ -407,16 +407,18 @@ class ExaProb:
 
             # Call ExaConstit to run the CP simulation
             write_ExaProb_log('\tWaiting ExaConstit for file %s ......' % self.Exper_input_files[k])
-            
-            init_spack = '. ~/spack/share/spack/setup-env.sh && spack load mpich@3.3.2'
+
             run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=self.ncpus, mechanics=self.loc_mechanics, toml_name=self.Toml_files[k])
             # quite all the stdout from this. We could have this saved off to a logger potentially or to a given output file
             # if that is a desired behavior
             status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDERR)
+            # Uncomment below if run in SUMMIT
+            # run_exaconstit = 'jsrun -n6 -r6 -c1 -g1 /gpfs/alpine/world-shared/mat190/exaconstit/exaconstit-mechanics -opt {toml_name}'.format(toml_name=self.Toml_files[k])
+            # status = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)  #stderr=subprocess.DEVNULL)
 
 
             # Read the simulation output
-            # If output file exists and it is not empty, read stress
+            # If output file exists and it is not empty, read stress. If empty, return corresponding error flag value
             if os.path.exists(self.Sim_output_files[k]) and os.stat(self.Sim_output_files[k]).st_size != 0:
 
                 S_sim_data = np.loadtxt(self.Sim_output_files[k], dtype='float', ndmin=2)
