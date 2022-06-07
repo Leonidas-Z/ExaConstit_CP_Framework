@@ -9,6 +9,7 @@ import re
 import pandas as pd
 from ExaConstit_MatGen import Matgen
 from ExaConstit_Logger import write_ExaProb_log
+from Smooth_SS_generator.smoothening_ss_data_fcn import smooth_stress_strain_data
 
 class cd:
     """Context manager for changing the current working directory"""
@@ -78,7 +79,6 @@ class ExaProb:
             write_ExaProb_log('Input test_dataframe was provided None type and this isn\'t allowed', type ='error', changeline = True)
             sys.exit()
         self.test_dataframe = test_dataframe
-        self.n_steps = test_dataframe['n_steps']
         self.n_obj = len(test_dataframe)
         self.n_dep = n_dep
         self.dep_unopt = dep_unopt
@@ -90,6 +90,7 @@ class ExaProb:
         self.bin_mechanics = os.path.abspath(bin_mechanics)
         self.master_toml_file = os.path.abspath(master_toml_file)
         self.exper_input_files = test_dataframe['experiments']
+        self.strain_rate = test_dataframe['strain_rate']
         self.sim_input_file_dir = os.path.abspath(sim_input_file_dir)
         self.workflow_dir = os.path.abspath(workflow_dir)
         self.eval_cycle = 0
@@ -124,13 +125,11 @@ class ExaProb:
             self.exper_input_files[iexpt] = os.path.abspath(self.exper_input_files[iexpt])
 
         # Check if we have as many files as the objective functions
-        for data, name in zip([self.n_steps, self.dep_unopt], ["n_steps", "DEP_UNOPT"]):
-            if len(data) != len(self.exper_input_files):
-                write_ExaProb_log('The length of "{}" is not equal to len(exper_input_files)={}'.format(name, len(exper_input_files)), type ='error', changeline = True)
-                sys.exit()
+        if len(self.dep_unopt) != len(self.exper_input_files):
+            write_ExaProb_log('The length of "{}" is not equal to len(exper_input_files)={}'.format(name, len(exper_input_files)), type ='error', changeline = True)
+            sys.exit()
         
         # Read Experiment data sets and save to S_exp
-        # Check if the length of the S_exp is the same with the assigned n_steps in the toml file
         self.s_exp = []
         for file, k in zip(self.exper_input_files, range(self.n_obj)):
             try:
@@ -141,12 +140,7 @@ class ExaProb:
 
             # Assuming that each experiment data file has at the first column the stress values
             # s_exp will be a list that contains a numpy array corresponding to each file
-            s_exp = s_exp_data[:, 0]
-            self.s_exp.append(s_exp)
-
-            if self.n_steps[k] != len(s_exp):
-                write_ExaProb_log("The length of s_exp[{k}] is not equal to n_steps[{k}]".format(k=k), type = 'error', changeline = True)
-                sys.exit()
+            self.s_exp.append(np.copy(s_exp_data))
 
     def preprocess(self, x, igeneration, igene):
         '''
@@ -269,20 +263,19 @@ class ExaProb:
             # If output file exists and it is not empty, read stress
             output_file = os.path.join(fdironl, "avg_stress.txt")
             if os.path.exists(output_file) and os.stat(output_file).st_size != 0:
-
                 s_sim_data = np.loadtxt(output_file, dtype='float', ndmin=2)
                 # Macroscopic stress in the direction of load: 3rd column (z axis)
                 # If we're loading in the y-direction or z then this may not always be true
                 _s_sim = s_sim_data[:, 2]
-                # We use unique so to exclude repeated values from cyclic loading steps. Is it relevent for ExaConstit?
+                # We use unique so to exclude repeated values from cyclic loading steps. Is it relevant for ExaConstit?
                 # I don't believe this is necessary even in the cyclic case for ExaConstit unless someone is doing
                 # everything in just the elastic regime. Also, I think for the cyclic and dwell type loading conditions
                 # you might need to be more careful about how things fit as it can be hard to get exactly 
                 _s_sim = np.unique(_s_sim)
                 # Check if data size is the same with experiment data-set in case there is a convergence issue
-                num_sim_data = _s_sim.shape[0]
-                num_exp_data = self.s_exp[iobj].shape[0]
-                
+                auto_dt_file = os.path.join(fdironl, "auto_dt_out.txt")
+                smooth_exp_stress, smooth_exp_strain = smooth_stress_strain_data(self.s_exp[iobj], auto_dt_file, self.strain_rate[iobj])
+                error_strain = np.sqrt((self.s_exp[iobj][-1, 1] - smooth_exp_strain[-1])**2.0 / self.s_exp[iobj][-1, 1]**2.0)
                 # It's not clear to me this is the best way to do things in the long term.
                 # Although, it is fine for the time being.
                 # A user might provide more experimental data then needed or they may provide
@@ -294,13 +287,16 @@ class ExaProb:
                 # data to guess what the value should be for simulation values. It won't be perfect but it might work
                 # good enough. Alternatively, instead of a smoothing function we could look at doing something akin
                 # to a smooth spline of the data potentially from which we would then be able to obtain the values of interest.
-                if (status[iobj] == 0) and (num_sim_data == num_exp_data):
+                if (status[iobj] == 0) and (error_strain <= 0.05):
                     flag = 0  # successful
                     # Could produce a ton of logging noise
                     write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
-                elif num_sim_data < num_exp_data:  
+                # Check to see if error in strain values between expected and smoothed strain value
+                # is more then 5%
+                # Note we might want to eventually crank this percent down even more...
+                elif error_strain > 0.05:
                     flag = 1  # partially successful
-                    text = 'Simulation has unconverged results for eval_cycle = {}: no_sim_data = {} < no_exp_data = {}'.format(self.eval_cycle, no_sim_data, no_exp_data)
+                    text = 'Simulation has unconverged results for eval_cycle = {}: sim_data_strain = {} < exp_strain_data = {}'.format(self.eval_cycle, sim_strain_data, self.s_exp[iobj][-1, 1])
                     write_ExaProb_log(text, 'warning', changeline = True)
                     self.eval_cycle = self.eval_cycle - 1
                     return
@@ -317,7 +313,7 @@ class ExaProb:
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
             # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
-            s_exp_abs = np.abs(self.s_exp[iobj])
+            s_exp_abs = np.abs(smooth_exp_stress)
             s_sim_abs = np.abs(s_sim[iobj])
             
             f[iobj] = np.sqrt(np.sum((s_sim_abs - s_exp_abs)**2.0) / np.sum(s_exp_abs**2))

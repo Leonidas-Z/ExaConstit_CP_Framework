@@ -51,9 +51,17 @@
 #If both fields are provided only the Custom field will be used.
 #The Fixed field is ignored. Therefore, you should really only include one.
 [Time]
-    [Time.Fixed]
-        dt = 0.05
-        t_final = 1
+    [Time.Auto]
+        dt_start = 0.05
+        dt_min = 0.005
+        # Found this as a decent success with this option to capture knee of curve
+        # Also found 0.1 works but it can require a 1.5-2x more time steps
+        dt_scale = 0.125
+        t_final = 1.0
+        auto_dt_file = "auto_dt_out.txt"
+    # [Time.Fixed]
+    #     dt = 0.05
+    #     t_final = 1.0
     #[Time.Custom]
         #nsteps = 20
         #floc = "custom_dt.txt"

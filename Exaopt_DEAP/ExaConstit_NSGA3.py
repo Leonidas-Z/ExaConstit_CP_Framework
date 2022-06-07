@@ -114,13 +114,25 @@ mat_eta = 30.0
 mut_eta = 20.0
 indpb = 1.0/NDIM
 
+'''============================== Checkpoint Parameters (INPUT) ==============================='''
+# Specify seed. Each time we run the framework we will get same results if inputs and seed is the same (good for debugging)
+seed = None
+
+# Specify checkpoint frequency (generations per checkpoint)
+checkpoint_freq = 1
+
+# Specify checkpoint file or set None if you want to start from the beginning
+# checkpoint= "checkpoint_files/checkpoint_gen_2.pkl"
+checkpoint = None
+
+if checkpoint is not None:
+    restart = True
+else:
+    restart = False
 
 '''================ Initialize ExaProb object (this calls ExaConstit) (INPUT) ================'''
 # Initialize NSGA3 and ExaProb logger and specify log level (threshold):
-initialize_ExaProb_log(glob_loglvl='info', filename='logbook3_ExaProb.log')
-
-# Specify number of time steps of the simulation (lenght of custom_dt) - If choose ExaConstit auto_dt then this needs modifications
-n_steps=[20,20]
+initialize_ExaProb_log(glob_loglvl='info', filename='logbook3_ExaProb.log', restart=restart)
 
 # Absolute path that we can find the ExaConstit binary (mechanics)
 loc_mechanics="/Users/carson16/Documents/Research_Code/ldrd_exacmech/exaconstit_build_test/ExaConstit/build/bin/mechanics"
@@ -140,8 +152,10 @@ ngpus = 0
 nnodes = 1
 
 temperature_k = [270, 300]
+# The strain rate for each one of our simulations
+strain_rate = [1.0e-3, 1.0e-3]
 
-test_dataframe = {'experiments' : exper_input_files, 'n_steps' : n_steps, 'temp_k' : temperature_k}
+test_dataframe = {'experiments' : exper_input_files, 'temp_k' : temperature_k, 'strain_rate' : strain_rate}
 test_dataframe = pd.DataFrame(data = test_dataframe)
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
@@ -156,18 +170,6 @@ problem = ExaProb(n_dep = n_dep,
                   master_toml_file = './master_options.toml',
                   workflow_dir = './wf_files',
                   job_script_file = None)
-
-
-'''============================== Checkpoint Parameters (INPUT) ==============================='''
-# Specify seed. Each time we run the framework we will get same results if inputs and seed is the same (good for debugging)
-seed = None
-
-# Specify checkpoint frequency (generations per checkpoint)
-checkpoint_freq = 1
-
-# Specify checkpoint file or set None if you want to start from the beginning
-checkpoint= None #"checkpoint_files/checkpoint_gen_1.pkl"
-
 
 '''========================== Stopping criteria parameters (INPUT) ============================'''
 # Number of generations limit (e.g. if NGEN=2 it will perform the population initiation gen=0, and then gen=1 and gen=2. Thus, NGEN+1 generations)
@@ -231,7 +233,6 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 #=========================== Initialize GA Operators ============================
 #### Evolution Methods
 # Function that returns the objective functions values as a dictionary (if n_obj=3 it will evaluate the obj function 3 times and will return 3 values (str) - It runs the problem.evaluate for n_obj times)
-toolbox.register("evaluate", problem.evaluate)   # Evaluate obj functions
 toolbox.register("map_custom", map_custom.map_custom)
 toolbox.register("map_custom_fail", map_custom.map_custom_fail)
 # Crossover function using the cxSimulatedBinaryBounded method
@@ -293,9 +294,9 @@ def main(seed=None, checkpoint=None, checkpoint_freq=1):
             sys.exit()
 
         # Open excisting log files for writting
-        logfile1 = open("logbook1_stats.log","w+")
+        logfile1 = open("logbook1_stats.log","a")
         logfile1.write("loaded checkpoint: {}\n".format(checkpoint))
-        logfile2 = open("logbook2_solutions.log","w+")
+        logfile2 = open("logbook2_solutions.log","a")
         logfile2.write("loaded checkpoint: {}\n".format(checkpoint))
 
     else:
