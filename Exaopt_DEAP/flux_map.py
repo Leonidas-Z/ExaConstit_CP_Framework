@@ -23,8 +23,10 @@ def map_custom(problem, igeneration, genes):
     for igene, gene in enumerate(genes):
         istatus = []
         for iobj in range(problem.n_obj):
-            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-            fdironl = os.path.join(problem.workflow_dir, rve_name, "")
+            gene_dir = 'gen_' + str(igeneration)
+            fdir = os.path.join(problem.workflow_dir, gene_dir, "")
+            rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+            fdironl = os.path.join(fdir, rve_name, "")
 
             jobspec = flux.job.JobSpecV1.from_nest_command(
                 [os.path.join(fdironl, "hip_mechanics.flux")],
@@ -53,7 +55,7 @@ def map_custom(problem, igeneration, genes):
     # Post-process all of the data last
     for igene, gene in enumerate(genes):
         f = problem.postprocess(igeneration, igene, status[igene])
-        f_objective.append(f)
+        f_objective.append(np.copy(f))
     
     return f_objective
 
@@ -71,8 +73,10 @@ def map_custom_fail(problem, igeneration, gene, igene):
 
     istatus = []
     for iobj in range(problem.n_obj):
-        rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-        fdironl = os.path.join(problem.workflow_dir, rve_name, "")
+        gene_dir = 'gen_' + str(igeneration)
+        fdir = os.path.join(problem.workflow_dir, gene_dir, "")
+        rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+        fdironl = os.path.join(fdir, rve_name, "")
 
         jobspec = flux.job.JobSpecV1.from_nest_command(
             [os.path.join(fdironl, "hip_mechanics.flux")],
@@ -101,6 +105,6 @@ def map_custom_fail(problem, igeneration, gene, igene):
 
     # Post-process all of the data last
     f = problem.postprocess(igeneration, igene, status[0])
-    f_objective.append(f)
+    f_objective.append(np.copy(f))
     
     return f_objective

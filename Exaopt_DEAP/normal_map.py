@@ -2,6 +2,7 @@ import os
 import os.path
 import subprocess
 import sys
+import numpy as np
 from ExaConstit_Logger import write_ExaProb_log
 
 class cd:
@@ -37,20 +38,24 @@ def map_custom(problem, igeneration, genes):
     for igene, gene in enumerate(genes):
         istatus = []
         for iobj in range(problem.n_obj):
-            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-            fdironl = os.path.join(problem.workflow_dir, rve_name, "")
+            gene_dir = 'gen_' + str(igeneration)
+            fdir = os.path.join(problem.workflow_dir, gene_dir, "")
+            rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+            fdironl = os.path.join(fdir, rve_name, "")
             # cd into directory and run command and then when this code block exits it returns us
             # to the working directory
             with cd(fdironl):
                 print("Running: " + rve_name)
-                istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)
-                istatus.append(istatus_o)
+                output = os.path.join(fdironl+"run_output.txt")
+                with open(output, "w") as f:
+                    istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=f)
+                    istatus.append(istatus_o)
         status.append(istatus)
 
     # Post-process all of the data last
     for igene, gene in enumerate(genes):
         f = problem.postprocess(igeneration, igene, status[igene])
-        f_objective.append(f)
+        f_objective.append(np.copy(f))
     
     return f_objective
 
@@ -74,8 +79,10 @@ def map_custom_fail(problem, igeneration, gene, igene):
     # Run all of the gene data next
     istatus = []
     for iobj in range(problem.n_obj):
-        rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-        fdironl = os.path.join(problem.workflow_dir, rve_name, "")
+        gene_dir = 'gen_' + str(igeneration)
+        fdir = os.path.join(problem.workflow_dir, gene_dir, "")
+        rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+        fdironl = os.path.join(fdir, rve_name, "")
         # cd into directory and run command and then when this code block exits it returns us
         # to the working directory
         with cd(fdironl):
@@ -85,6 +92,6 @@ def map_custom_fail(problem, igeneration, gene, igene):
 
     # Post-process all of the data last
     f = problem.postprocess(igeneration, igene, status[0])
-    f_objective.append(f)
+    f_objective.append(np.copy(f))
 
     return f_objective

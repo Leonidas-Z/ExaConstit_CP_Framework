@@ -90,6 +90,7 @@ class ExaProb:
         self.bin_mechanics = os.path.abspath(bin_mechanics)
         self.master_toml_file = os.path.abspath(master_toml_file)
         self.exper_input_files = test_dataframe['experiments']
+        self.desired_strain = test_dataframe['desired_strain']
         self.strain_rate = test_dataframe['strain_rate']
         self.sim_input_file_dir = os.path.abspath(sim_input_file_dir)
         self.workflow_dir = os.path.abspath(workflow_dir)
@@ -134,6 +135,8 @@ class ExaProb:
         for file, k in zip(self.exper_input_files, range(self.n_obj)):
             try:
                 s_exp_data = np.loadtxt(file, dtype = 'float', ndmin = 2)
+                ind = np.argmax(s_exp_data[:, 1] > self.desired_strain[k])
+                s_exp_data = s_exp_data[0:ind+1, :]
             except:
                 write_ExaProb_log("{file} was not found!".format(file = file), type = 'error', changeline = True)
                 sys.exit()
@@ -176,8 +179,10 @@ class ExaProb:
 
         # Create all of our work directories and such
         for iobj in range(self.n_obj):
-            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-            fdironl = os.path.join(self.workflow_dir, rve_name, "") 
+            gene_dir = 'gen_' + str(igeneration)
+            fdir = os.path.join(self.workflow_dir, gene_dir, "")
+            rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+            fdironl = os.path.join(fdir, rve_name, "") 
             if not os.path.exists(fdironl):
                 os.makedirs(fdironl)
             # Create symlink
@@ -257,8 +262,10 @@ class ExaProb:
             # We can then within here cd to the subdirectory that we generated
             # Count GA and Exaconstit iterations
             self.runs += 1
-            rve_name = 'gen_' + str(igeneration) + '_gene_' + str(igene) + '_obj_' + str(iobj)
-            fdironl = os.path.join(self.workflow_dir, rve_name, "")
+            gene_dir = 'gen_' + str(igeneration)
+            fdir = os.path.join(self.workflow_dir, gene_dir, "")
+            rve_name = 'gene_' + str(igene) + '_obj_' + str(iobj)
+            fdironl = os.path.join(fdir, rve_name, "")
                         # Read the simulation output
             # If output file exists and it is not empty, read stress
             output_file = os.path.join(fdironl, "avg_stress.txt")
@@ -271,11 +278,10 @@ class ExaProb:
                 # I don't believe this is necessary even in the cyclic case for ExaConstit unless someone is doing
                 # everything in just the elastic regime. Also, I think for the cyclic and dwell type loading conditions
                 # you might need to be more careful about how things fit as it can be hard to get exactly 
-                _s_sim = np.unique(_s_sim)
+                # _s_sim = np.unique(_s_sim)
                 # Check if data size is the same with experiment data-set in case there is a convergence issue
                 auto_dt_file = os.path.join(fdironl, "auto_dt_out.txt")
-                smooth_exp_stress, smooth_exp_strain = smooth_stress_strain_data(self.s_exp[iobj], auto_dt_file, self.strain_rate[iobj])
-                error_strain = np.sqrt((self.s_exp[iobj][-1, 1] - smooth_exp_strain[-1])**2.0 / self.s_exp[iobj][-1, 1]**2.0)
+                smooth_exp_stress, smooth_exp_strain, error_strain = smooth_stress_strain_data(self.s_exp[iobj], auto_dt_file, self.strain_rate[iobj], self.desired_strain[iobj])
                 # It's not clear to me this is the best way to do things in the long term.
                 # Although, it is fine for the time being.
                 # A user might provide more experimental data then needed or they may provide
@@ -287,21 +293,23 @@ class ExaProb:
                 # data to guess what the value should be for simulation values. It won't be perfect but it might work
                 # good enough. Alternatively, instead of a smoothing function we could look at doing something akin
                 # to a smooth spline of the data potentially from which we would then be able to obtain the values of interest.
-                if (status[iobj] == 0) and (error_strain <= 0.05):
+                if (status[iobj] == 0) and (error_strain <= 0.01):
                     flag = 0  # successful
                     # Could produce a ton of logging noise
                     write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
                 # Check to see if error in strain values between expected and smoothed strain value
-                # is more then 5%
+                # is more then 1%
                 # Note we might want to eventually crank this percent down even more...
-                elif error_strain > 0.05:
-                    flag = 1  # partially successful
-                    text = 'Simulation has unconverged results for eval_cycle = {}: sim_data_strain = {} < exp_strain_data = {}'.format(self.eval_cycle, sim_strain_data, self.s_exp[iobj][-1, 1])
+                # If we detect this then we say all the final stress values are 0
+                # by doing this we still allow the gene to exist but we penalize it for the
+                # portions that it did badly on
+                elif error_strain > 0.01:
+                    flag = 0  # partially successful
+                    text = 'Simulation has unconverged results for eval_cycle = {}: sim_data_strain = {} < exp_strain_data = {}'.format(self.eval_cycle, smooth_exp_strain[-1], self.s_exp[iobj][-1, 1])
                     write_ExaProb_log(text, 'warning', changeline = True)
-                    self.eval_cycle = self.eval_cycle - 1
-                    return
+                    _s_sim = np.append(_s_sim, np.zeros(24))
                 # s_sim will be a list that contains a numpy array of stress corresponding to each file
-                s_sim.append(_s_sim)
+                s_sim.append(np.copy(_s_sim))
 
             else:
                 flag = 2
@@ -312,11 +320,24 @@ class ExaProb:
                 return
 
             # Evaluate the individual objective function. Will have k functions. (Normalized Root-mean-square deviation (RMSD)- 1st Moment (it is the error percentage))
-            # We take the absolute values to compensate for the fact that in cyclic simulations we will have negative and positive values
-            s_exp_abs = np.abs(smooth_exp_stress)
-            s_sim_abs = np.abs(s_sim[iobj])
-            
-            f[iobj] = np.sqrt(np.sum((s_sim_abs - s_exp_abs)**2.0) / np.sum(s_exp_abs**2))
+            # https://en.wikipedia.org/wiki/Root-mean-square_deviation
+            s_exp_abs = smooth_exp_stress
+            s_sim_abs = s_sim[iobj]
+            # Lots of ways to normalize
+            # 1: NRMSD = \frac{RMSD}{max(obsevable) - min(observable)}
+            # 2: NRMSD = \frac{RMSD}{Q3(obsevable) - Q1(observable)}
+            # 3: NRMSD = \frac{RMSD}{STD(obsevable)}
+            # 4: NRMSD = \frac{RMSD}{MEAN(observable)}
+            # Based on my testing, it appears that #3/#2 might give the most reasonable
+            # set of answers as they penalize results that nail the elastic regime,
+            # hit portions of the elastic plastic and then are just way off after that point.
+            # If our plastic regime is way off we want to penalize things.
+            # NRMSD = \frac{RMSD}{max(obsevable) - min(observable)}
+            # RMSD = \sqrt(\frac{\sum_{i=1}^{n} ( simulated_i - observable_i )^2 }{n})
+            # f[iobj] = np.sqrt(np.sum(np.power((s_sim_abs - s_exp_abs), 2)) / s_sim_abs.size) / (np.max(s_exp_abs) - np.min(s_exp_abs))
+            # f[iobj] = np.sqrt(np.sum(np.power((s_sim_abs - s_exp_abs), 2)) / s_sim_abs.size) / (np.quantile(s_exp_abs, 0.75) - np.quantile(s_exp_abs, 0.25))
+            f[iobj] = np.sqrt(np.sum(np.power((s_sim_abs - s_exp_abs), 2)) / s_sim_abs.size) / (np.std(s_exp_abs))
+            # f[iobj] = np.sqrt(np.sum(np.power((s_sim_abs - s_exp_abs), 2)) / s_sim_abs.size) / (np.mean(s_exp_abs))
             write_ExaProb_log('\t\tIndividual obj function: fit = '+str(f[iobj]))
 
         self.s_sim.append(s_sim)

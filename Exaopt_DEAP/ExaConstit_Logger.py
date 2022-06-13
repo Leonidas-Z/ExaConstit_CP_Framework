@@ -24,7 +24,7 @@ def initialize_ExaProb_log(glob_loglvl='debug', filename='logbook_ExaProb.log', 
 
 
 
-def write_ExaProb_log(text, type='debug', changeline=False):
+def write_ExaProb_log(text, type='info', changeline=False):
 
     try: logger
     except:

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull
 from scipy import interpolate
 
-def smooth_stress_strain_data(raw_experimental_data, dt_file_loc, strain_rate, visualize = False):
+def smooth_stress_strain_data(raw_experimental_data, dt_file_loc, strain_rate, strain_final, visualize = False):
     '''
     This function takes in a raw set of experimental data and a dt file location
     and then smooths out the experimental data to match the location of the dt file
@@ -30,6 +30,15 @@ def smooth_stress_strain_data(raw_experimental_data, dt_file_loc, strain_rate, v
     # Read custom_dt data
     custom_dt = np.loadtxt(dt_file_loc, dtype='float', ndmin=1)
 
+    total_strain = np.log(1.0 + np.sum(custom_dt) * strain_rate)
+    #If total strain is greater than desired_strain we're still fine
+    error_strain = np.sqrt((strain_final - total_strain)**2.0 / strain_final**2.0)
+    if (error_strain > 0.01):
+        time_final = np.sum(custom_dt)
+        time_desired = (np.exp(strain_final) - 1.0) / strain_rate
+        times = np.linspace(time_final, time_desired, num=25)
+        time_deltas = np.diff(times)
+        custom_dt = np.append(custom_dt, time_deltas)
 
     # ================ Smoothening Script =================
 
@@ -69,7 +78,7 @@ def smooth_stress_strain_data(raw_experimental_data, dt_file_loc, strain_rate, v
     # Calculate new strains (x2) by using specified strain rate and custom_dt
     # Find stresses corresponding to the above x2 (strains) using Cubic Spline
     # We provide the strain rate as an input
-    nsteps = len(custom_dt)+1
+    nsteps = len(custom_dt) + 1
     x2 = np.zeros(nsteps)
     for i in range(1, nsteps):
         x2[i] = x2[i-1] + custom_dt[i-1] * strain_rate
@@ -98,4 +107,4 @@ def smooth_stress_strain_data(raw_experimental_data, dt_file_loc, strain_rate, v
         plt.legend(['original curve', 'convex_hull curve', 'interpolated curve'])
         plt.show()
 
-    return (y2, x2)
+    return (y2, x2, error_strain)
