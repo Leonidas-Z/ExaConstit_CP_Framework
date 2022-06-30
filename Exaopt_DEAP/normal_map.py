@@ -1,6 +1,6 @@
 import os
 import os.path
-import subprocess
+import subprocess, shlex
 import sys
 import numpy as np
 from ExaConstit_Logger import write_ExaProb_log
@@ -26,7 +26,7 @@ def map_custom(problem, igeneration, genes):
 
     status = []
 
-    run_exaconstit = 'mpirun -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=problem.ncpus, mechanics=problem.bin_mechanics, toml_name='options.toml')
+    run_exaconstit = 'mpiexec -np {ncpus} {mechanics} -opt {toml_name}'.format(ncpus=problem.ncpus, mechanics=problem.bin_mechanics, toml_name='options.toml')
 
     f_objective = []
 
@@ -48,8 +48,23 @@ def map_custom(problem, igeneration, genes):
                 print("Running: " + rve_name)
                 output = os.path.join(fdironl+"run_output.txt")
                 with open(output, "w") as f:
-                    istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=f)
-                    istatus.append(istatus_o)
+                    try:
+                        run_exaconstit_split = shlex.split(run_exaconstit)
+                        p = subprocess.Popen(run_exaconstit_split, start_new_session=True, stdout=f)
+                        returncode = p.wait(timeout=problem.timeout[iobj])
+                    except subprocess.TimeoutExpired:
+                        print(f'Timeout for {run_exaconstit} ({problem.timeout[iobj]}s) expired', file=sys.stderr)
+                        p.terminate()
+                        returncode = 143
+                    except KeyboardInterrupt:
+                        try:
+                            p.terminate()
+                            sys.exit('ctrl-c interrupt')
+                        except:
+                            p.kill()
+                            sys.exit('sent SIGKILL to mpi call as terminate failed...')
+
+                    istatus.append(returncode)
         status.append(istatus)
 
     # Post-process all of the data last
@@ -86,8 +101,25 @@ def map_custom_fail(problem, igeneration, gene, igene):
         # cd into directory and run command and then when this code block exits it returns us
         # to the working directory
         with cd(fdironl):
-            istatus_o = subprocess.call(run_exaconstit, shell=True, stdout=subprocess.DEVNULL)
-            istatus.append(istatus_o)
+            print("Running: " + rve_name)
+            output = os.path.join(fdironl+"run_output.txt")
+            with open(output, "w") as f:
+                try:
+                    run_exaconstit_split = shlex.split(run_exaconstit)
+                    p = subprocess.Popen(run_exaconstit_split, start_new_session=True, stdout=f)
+                    returncode = p.wait(timeout=problem.timeout[iobj])
+                except subprocess.TimeoutExpired:
+                    print(f'Timeout for {run_exaconstit} ({problem.timeout[iobj]}s) expired', file=sys.stderr)
+                    p.terminate()
+                    returncode = 143
+                except KeyboardInterrupt:
+                    try:
+                        p.terminate()
+                        sys.exit('ctrl-c interrupt')
+                    except:
+                        p.kill()
+                        sys.exit('sent SIGKILL to mpi call as terminate failed...')
+                istatus.append(returncode)
     status.append(istatus)
 
     # Post-process all of the data last

@@ -2,6 +2,7 @@ import os
 import os.path
 import subprocess
 import sys
+import numpy as np
 
 import flux
 import flux.job

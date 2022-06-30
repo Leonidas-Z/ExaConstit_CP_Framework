@@ -87,6 +87,7 @@ class ExaProb:
         self.nnodes = nnodes
         self.ncpus = ncpus
         self.ngpus = ngpus
+        self.timeout = test_dataframe['timeout']
         self.bin_mechanics = os.path.abspath(bin_mechanics)
         self.master_toml_file = os.path.abspath(master_toml_file)
         self.exper_input_files = test_dataframe['experiments']
@@ -96,6 +97,7 @@ class ExaProb:
         self.workflow_dir = os.path.abspath(workflow_dir)
         self.eval_cycle = 0
         self.runs = 0
+        self.flag = []
 
         # Not all workflow managers might need a job script
         # If one is provided then we need to get out the location of that file
@@ -255,6 +257,7 @@ class ExaProb:
         s_sim = []
         flag = -1
         f = np.zeros(self.n_obj)
+        write_ExaProb_log('Generation: ' + str(igeneration) + ' gene: ' + str(igene))
 
         # Run k simulations. One for each objective function
         for iobj in range(self.n_obj):
@@ -293,7 +296,7 @@ class ExaProb:
                 # data to guess what the value should be for simulation values. It won't be perfect but it might work
                 # good enough. Alternatively, instead of a smoothing function we could look at doing something akin
                 # to a smooth spline of the data potentially from which we would then be able to obtain the values of interest.
-                if (status[iobj] == 0) and (error_strain <= 0.01):
+                if error_strain <= 0.01:
                     flag = 0  # successful
                     # Could produce a ton of logging noise
                     write_ExaProb_log('\t\tSUCCESSFULL SIMULATION!!!')
@@ -310,7 +313,6 @@ class ExaProb:
                     _s_sim = np.append(_s_sim, np.zeros(24))
                 # s_sim will be a list that contains a numpy array of stress corresponding to each file
                 s_sim.append(np.copy(_s_sim))
-
             else:
                 flag = 2
                 text = 'Simulation did not run for eval_cycle = {}. The output file was empty or not existent!'.format(self.eval_cycle)
@@ -363,5 +365,6 @@ class ExaProb:
 
 
     def is_simulation_done(self, igene):
+        print([igene, self.flag[igene]])
         return self.flag[igene]
 

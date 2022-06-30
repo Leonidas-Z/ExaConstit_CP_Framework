@@ -154,8 +154,12 @@ nnodes = 1
 temperature_k = [270, 300]
 # The strain rate for each one of our simulations
 strain_rate = [1.0e-3, 1.0e-3]
+# desired strain we're trying to reach
+desired_strain = [0.001, 0.001]
+# how long we want each simulation to run before killing it
+timeout = [1 * 60, 1 * 60]
 
-test_dataframe = {'experiments' : exper_input_files, 'temp_k' : temperature_k, 'strain_rate' : strain_rate}
+test_dataframe = {'experiments' : exper_input_files, 'temp_k' : temperature_k, 'strain_rate' : strain_rate, 'desired_strain' : desired_strain, 'timeout' : timeout}
 test_dataframe = pd.DataFrame(data = test_dataframe)
 
 # Specify ExaProb class arguments to run ExaConstit simulations and evaluate the objective functions
